@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#ff7a59" />
+<title>Chuckle Cam | Make everyday moments a little funnier</title>
+<style>
+:root{--bg:#fff8f2;--card:#fff;--ink:#29241f;--muted:#756b62;--hot:#ff6b4a;--hot2:#ff9b66;--yellow:#ffd96a;--green:#40b98c;--line:#eadfd5;--shadow:0 18px 45px rgba(94,54,26,.12);--r:24px}
+*{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink);background:radial-gradient(circle at 7% 3%,#ffe3c7 0,transparent 25%),radial-gradient(circle at 90% 10%,#ffd4cd 0,transparent 24%),var(--bg);min-height:100vh}
+button,input,select,textarea{font:inherit}.app{width:min(1080px,100%);margin:auto;padding:18px 18px 110px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.18rem}.logo{width:44px;height:44px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(145deg,var(--yellow),var(--hot2));box-shadow:0 8px 20px #ffb67555;font-size:1.5rem;transform:rotate(-4deg)}.pill{border:1px solid var(--line);background:#ffffffaa;border-radius:999px;padding:8px 12px;color:var(--muted);font-size:.82rem}.hero{background:linear-gradient(135deg,#2d2721,#514338);color:white;border-radius:32px;padding:28px;box-shadow:var(--shadow);position:relative;overflow:hidden;margin-bottom:18px}.hero:after{content:"chuckle";position:absolute;right:-10px;bottom:-28px;font-size:6rem;font-weight:1000;color:#ffffff10;transform:rotate(-8deg)}h1{font-size:clamp(1.8rem,5vw,3.25rem);line-height:1.08;margin:0 0 10px;letter-spacing:-.04em}.hero p{margin:0;color:#ebded4;max-width:650px;line-height:1.7}.steps{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.steps span{background:#ffffff18;border:1px solid #ffffff22;padding:8px 11px;border-radius:999px;font-size:.83rem}.grid{display:grid;grid-template-columns:1.04fr .96fr;gap:18px}.card{background:var(--card);border:1px solid #fff;border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}.card h2{margin:0 0 6px;font-size:1.12rem}.sub{color:var(--muted);font-size:.88rem;margin:0 0 16px;line-height:1.6}.drop{min-height:330px;border:2px dashed #e4c9b8;border-radius:21px;background:linear-gradient(160deg,#fff8f3,#fff);display:grid;place-items:center;text-align:center;position:relative;overflow:hidden;cursor:pointer}.drop.drag{border-color:var(--hot);background:#fff1e9}.drop img{width:100%;height:100%;position:absolute;inset:0;object-fit:cover}.empty{padding:30px;z-index:1}.camera{font-size:3.2rem;display:block;margin-bottom:8px}.file{position:absolute;width:1px;height:1px;opacity:0}.actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}.btn{border:0;border-radius:15px;padding:12px 16px;font-weight:800;cursor:pointer;display:inline-flex;justify-content:center;align-items:center;gap:7px;transition:.18s transform,.18s opacity}.btn:hover{transform:translateY(-2px)}.btn:active{transform:translateY(0)}.primary{background:linear-gradient(135deg,var(--hot),#ff8655);color:#fff;box-shadow:0 10px 20px #ff6b4a38}.secondary{background:#f7eee8;color:var(--ink)}.ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}.full{width:100%}.controls{display:grid;gap:14px}.label{font-size:.85rem;font-weight:800;margin-bottom:7px;display:block}.chips{display:flex;gap:8px;flex-wrap:wrap}.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 12px;cursor:pointer;color:var(--muted);font-weight:700}.chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}textarea{width:100%;min-height:74px;resize:vertical;border:1px solid var(--line);border-radius:14px;padding:12px;outline:none}textarea:focus{border-color:var(--hot)}.notice{background:#fff5d9;border-radius:14px;padding:11px 12px;font-size:.8rem;color:#725c22;line-height:1.5}.result{margin-top:18px;display:none}.result.show{display:block;animation:up .35s ease}@keyframes up{from{opacity:0;transform:translateY(8px)}}.resultbox{background:linear-gradient(145deg,#fff5eb,#fff);border:1px solid #f5ded0;border-radius:20px;padding:18px}.tag{display:inline-block;background:var(--yellow);font-size:.74rem;font-weight:900;padding:5px 9px;border-radius:999px}.joke{font-size:1.35rem;font-weight:900;line-height:1.5;margin:12px 0}.why{color:var(--muted);font-size:.85rem;line-height:1.55}.score{display:flex;gap:7px;align-items:center;font-size:.82rem;color:var(--muted);margin-top:14px}.score button{border:0;background:#f4e8df;border-radius:10px;padding:7px 9px;cursor:pointer}.loading{display:none;text-align:center;padding:18px}.loading.show{display:block}.dots span{display:inline-block;width:8px;height:8px;margin:3px;background:var(--hot);border-radius:50%;animation:b 1s infinite alternate}.dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}@keyframes b{to{transform:translateY(-7px);opacity:.45}}.gallery{margin-top:18px}.gallery-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:12px}.gallery h2{margin:0}.gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.memory{background:#fff;border-radius:18px;overflow:hidden;border:1px solid var(--line);box-shadow:0 10px 23px #6e3d1b12}.memory img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}.memory .body{padding:12px}.memory strong{display:block;line-height:1.45;font-size:.9rem}.memory small{display:block;color:var(--muted);margin-top:6px}.empty-gallery{grid-column:1/-1;color:var(--muted);text-align:center;padding:28px;border:1px dashed var(--line);border-radius:18px}.toast{position:fixed;left:50%;bottom:25px;transform:translate(-50%,30px);opacity:0;pointer-events:none;background:#29241f;color:#fff;padding:12px 16px;border-radius:999px;transition:.25s;z-index:10;font-size:.88rem}.toast.show{opacity:1;transform:translate(-50%,0)}.footer-note{font-size:.76rem;color:var(--muted);margin-top:12px;line-height:1.5}
+@media(max-width:760px){.app{padding:12px 12px 100px}.hero{padding:23px 20px;border-radius:25px}.grid{grid-template-columns:1fr}.drop{min-height:285px}.gallery-grid{grid-template-columns:1fr 1fr}.pill{display:none}}@media(max-width:440px){.gallery-grid{grid-template-columns:1fr}.actions .btn{flex:1}.top{margin-top:5px}.joke{font-size:1.15rem}}
+</style>
+</head>
+<body>
+<main class="app">
+<header class="top"><div class="brand"><div class="logo">📸</div><div>Chuckle Cam</div></div><div class="pill">Prototype — photos never leave your device</div></header>
+<section class="hero"><h1>Give your everyday shot,<br>a little punchline.</h1><p>Snap something that caught your eye and pick a flavor of funny. Chuck, your AI sidekick, comes up with a short caption to go with the photo.</p><div class="steps"><span>1. Snap</span><span>2. Pick a vibe</span><span>3. Get a chuckle</span><span>4. Share it</span></div></section>
+<section class="grid">
+<div class="card"><h2>Today's shot</h2><p class="sub">Before you use a photo, check that it doesn't show faces, addresses, ID badges, or anything else personal.</p>
+<label class="drop" id="drop" for="file"><input class="file" id="file" type="file" accept="image/*" capture="environment"><div class="empty" id="empty"><span class="camera">📷</span><strong>Tap to take or choose a photo</strong><div class="sub" style="margin:8px 0 0">or drop a photo here</div></div><img id="preview" alt="Your selected photo" hidden></label>
+<div class="actions"><label class="btn primary" for="file">📸 Choose a photo</label><button class="btn secondary" id="clear">↻ Start over</button></div>
+</div>
+<div class="card"><h2>What kind of funny?</h2><p class="sub">Turn the chuckle up or down to match your mood.</p>
+<div class="controls"><div><span class="label">Humor style</span><div class="chips" id="styles"><button class="chip active" data-style="dad">Dad joke</button><button class="chip" data-style="roast">Gentle roast</button><button class="chip" data-style="caption">Caption this</button><button class="chip" data-style="scifi">Sci-fi</button></div></div>
+<div><label class="label" for="hint">Describe the photo in a few words (optional)</label><textarea id="hint" maxlength="100" placeholder="e.g. Outside the station, a flowerpot that looked like a face"></textarea></div>
+<div class="notice">🛡️ Chuck won't make jokes that hurt anyone, poke fun at appearances, or guess personal details.</div>
+<button class="btn primary full" id="generate">✨ Make me chuckle</button></div>
+<div class="loading" id="loading"><div class="dots"><span></span><span></span><span></span></div><div class="sub">Chuck is thinking…</div></div>
+<div class="result" id="result"><div class="resultbox"><span class="tag" id="resultTag">Dad joke</span><div class="joke" id="joke"></div><div class="why" id="why"></div><div class="actions"><button class="btn primary" id="share">↗ Share</button><button class="btn ghost" id="again">🎲 Try another</button><button class="btn ghost" id="save">♡ Save</button></div><div class="score">How was that one? <button data-score="1">😐</button><button data-score="2">🙂</button><button data-score="3">😂</button></div></div></div>
+<p class="footer-note">This standalone version writes captions right on your device, using your description and the style you picked. The full version will connect image-recognition AI through a secure backend API.</p>
+</div></section>
+<section class="gallery"><div class="gallery-head"><div><h2>Chuckle Album</h2><p class="sub" style="margin:4px 0 0">Saved shots stay in this browser, on this device.</p></div><button class="btn ghost" id="clearGallery">Clear all</button></div><div class="gallery-grid" id="gallery"></div></section>
+</main><div class="toast" id="toast"></div>
+<script>
+const $=s=>document.querySelector(s); const $$=s=>[...document.querySelectorAll(s)];
+let imageData='', style='dad', lastJoke='', lastWhy='';
+const labels={dad:'Dad joke',roast:'Gentle roast',caption:'Caption this',scifi:'Sci-fi'};
+const banks={
+dad:[
+ h=>`Shutter to think what today would've been without ${word(h,'this')}.`,
+ h=>`${word(h,'This one')} really develops on you.`,
+ h=>`I'd frame ${word(h,'this shot')}, but honestly, it's already framed.`,
+ h=>`I asked ${word(h,'this')} to say cheese. Now I want a sandwich.`,
+ h=>`My review of ${word(h,'this photo')}: ten out of ten, zero negatives.`],
+roast:[
+ h=>`Okay, who told ${word(h,'that')} it was the main character today?`,
+ h=>`Trying to blend into an ordinary day with that much presence? Bold move.`,
+ h=>`Nobody asked for this. And yet, look how polished it is.`,
+ h=>`Hold on. Does ${word(h,'this')} know it's funny, or is it just like that?`,
+ h=>`It was supposed to be a normal day. Then this happened.`],
+caption:[
+ h=>`“Today's star. Nobody has told it yet.”`,
+ h=>`It's a still image. It still has opinions.`,
+ h=>`Every so often, everyday life misplaces its props.`,
+ h=>`A tiny incident, witnessed by exactly one photographer.`,
+ h=>`Can't explain it. Saving it anyway.`],
+scifi:[
+ h=>`The year is 3026. Humanity finally understands the meaning of ${word(h,'this scene')}.`,
+ h=>`Field report from Earth: “This planet gets funnier the longer you look.”`,
+ h=>`In the museum of the future, this hangs under a single label: “Everyday Life.”`,
+ h=>`AI analysis complete: not quite laugh-out-loud, but well worth a double take.`,
+ h=>`The Galactic Federation has provisionally listed ${word(h,'this')} as a cultural treasure.`]
+};
+function word(h,f){if(!h.trim())return f;let t=h.trim().replace(/[.!?].*/,'').trim();if(t.length>32){const cut=t.slice(0,32);const sp=cut.lastIndexOf(' ');t=(sp>12?cut.slice(0,sp):cut)+'…'}return `“${t}”`;}
+function showToast(t){const x=$('#toast');x.textContent=t;x.classList.add('show');setTimeout(()=>x.classList.remove('show'),1800)}
+function loadFile(file){if(!file||!file.type.startsWith('image/'))return showToast('Please choose an image file');if(file.size>8*1024*1024)return showToast('Please keep images under 8 MB');const r=new FileReader();r.onload=e=>{imageData=e.target.result;$('#preview').src=imageData;$('#preview').hidden=false;$('#empty').hidden=true;$('#result').classList.remove('show')};r.readAsDataURL(file)}
+$('#file').addEventListener('change',e=>loadFile(e.target.files[0]));
+const drop=$('#drop');['dragenter','dragover'].forEach(n=>drop.addEventListener(n,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(n=>drop.addEventListener(n,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>loadFile(e.dataTransfer.files[0]));
+$('#clear').onclick=()=>{imageData='';$('#file').value='';$('#preview').hidden=true;$('#empty').hidden=false;$('#result').classList.remove('show')};
+$$('.chip').forEach(b=>b.onclick=()=>{$$('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');style=b.dataset.style});
+function generate(){if(!imageData)return showToast('Pick a photo first');$('#result').classList.remove('show');$('#loading').classList.add('show');setTimeout(()=>{const arr=banks[style];let candidate=arr[Math.floor(Math.random()*arr.length)]($('#hint').value);if(candidate===lastJoke)candidate=arr[(arr.findIndex(fn=>fn($('#hint').value)===candidate)+1)%arr.length]($('#hint').value);lastJoke=candidate;lastWhy=$('#hint').value.trim()?`Based on your note “${$('#hint').value.trim().slice(0,45)}”, I kept it short and easy to share.`:'A short line that leaves room for whoever sees the photo to imagine the rest.';$('#resultTag').textContent=labels[style];$('#joke').textContent=lastJoke;$('#why').textContent=lastWhy;$('#loading').classList.remove('show');$('#result').classList.add('show')},720)}
+$('#generate').onclick=generate;$('#again').onclick=generate;
+$('#share').onclick=async()=>{const text=`${lastJoke}\n#ChuckleCam`;try{if(navigator.share){const blob=await (await fetch(imageData)).blob();const f=new File([blob],'chuckle-cam.jpg',{type:blob.type});if(navigator.canShare?.({files:[f]}))await navigator.share({title:'Chuckle Cam',text,files:[f]});else await navigator.share({title:'Chuckle Cam',text});}else{await navigator.clipboard.writeText(text);showToast('Caption copied to clipboard')}}catch(e){if(e.name!=='AbortError')showToast("Couldn't complete sharing")}};
+function dataSmall(src,max=520){return new Promise(res=>{const im=new Image();im.onload=()=>{const s=Math.min(1,max/im.width);const c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.72))};im.src=src})}
+$('#save').onclick=async()=>{if(!lastJoke)return;const items=JSON.parse(localStorage.getItem('chuckleCamItems')||'[]');items.unshift({img:await dataSmall(imageData),joke:lastJoke,date:new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'})});try{localStorage.setItem('chuckleCamItems',JSON.stringify(items.slice(0,12)));renderGallery();showToast('Saved to your album')}catch{showToast('Not enough storage space')}};
+function renderGallery(){const g=$('#gallery');const items=JSON.parse(localStorage.getItem('chuckleCamItems')||'[]');if(!items.length){g.innerHTML='<div class="empty-gallery">Nothing saved yet. Keep your first chuckle here.</div>';return}g.innerHTML=items.map((x,i)=>`<article class="memory"><img src="${x.img}" alt="Saved photo"><div class="body"><strong>${escapeHtml(x.joke)}</strong><small>${x.date}</small></div></article>`).join('')}
+function escapeHtml(s){return s.replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+$('#clearGallery').onclick=()=>{if(confirm('Delete everything in your album?')){localStorage.removeItem('chuckleCamItems');renderGallery();showToast('Album cleared')}};$$('[data-score]').forEach(b=>b.onclick=()=>showToast(b.dataset.score==='3'?"Big laugh — we'll take it!":'Thanks, your reaction is noted.'));renderGallery();
+</script>
+</body></html>
