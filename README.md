@@ -10,4 +10,4 @@ A browser-based web application that generates humorous captions for daily photo
   - Album saving using LocalStorage
   - Native sharing via Web Share API
 - **Tech Stack:** HTML, CSS, Vanilla JavaScript
-- **Live Demo:** [ここにGitHub PagesのURLを貼ります]
+- **Live Demo:** [https://shunsuke127.github.io/100-days-of-code/kusutto_camera_Japanese_day01.html]
