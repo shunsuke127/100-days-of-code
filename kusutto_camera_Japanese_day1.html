@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#ff7a59" />
+<title>クスッとカメラ | 日常を一言おもしろく</title>
+<style>
+:root{--bg:#fff8f2;--card:#fff;--ink:#29241f;--muted:#756b62;--hot:#ff6b4a;--hot2:#ff9b66;--yellow:#ffd96a;--green:#40b98c;--line:#eadfd5;--shadow:0 18px 45px rgba(94,54,26,.12);--r:24px}
+*{box-sizing:border-box} body{margin:0;font-family:"Hiragino Sans","Yu Gothic UI",system-ui,-apple-system,sans-serif;color:var(--ink);background:radial-gradient(circle at 7% 3%,#ffe3c7 0,transparent 25%),radial-gradient(circle at 90% 10%,#ffd4cd 0,transparent 24%),var(--bg);min-height:100vh}
+button,input,select,textarea{font:inherit}.app{width:min(1080px,100%);margin:auto;padding:18px 18px 110px}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}.brand{display:flex;align-items:center;gap:10px;font-weight:900;font-size:1.18rem}.logo{width:44px;height:44px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(145deg,var(--yellow),var(--hot2));box-shadow:0 8px 20px #ffb67555;font-size:1.5rem;transform:rotate(-4deg)}.pill{border:1px solid var(--line);background:#ffffffaa;border-radius:999px;padding:8px 12px;color:var(--muted);font-size:.82rem}.hero{background:linear-gradient(135deg,#2d2721,#514338);color:white;border-radius:32px;padding:28px;box-shadow:var(--shadow);position:relative;overflow:hidden;margin-bottom:18px}.hero:after{content:"くすっ";position:absolute;right:-10px;bottom:-28px;font-size:6rem;font-weight:1000;color:#ffffff10;transform:rotate(-8deg)}h1{font-size:clamp(1.8rem,5vw,3.25rem);line-height:1.08;margin:0 0 10px;letter-spacing:-.04em}.hero p{margin:0;color:#ebded4;max-width:650px;line-height:1.7}.steps{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.steps span{background:#ffffff18;border:1px solid #ffffff22;padding:8px 11px;border-radius:999px;font-size:.83rem}.grid{display:grid;grid-template-columns:1.04fr .96fr;gap:18px}.card{background:var(--card);border:1px solid #fff;border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}.card h2{margin:0 0 6px;font-size:1.12rem}.sub{color:var(--muted);font-size:.88rem;margin:0 0 16px;line-height:1.6}.drop{min-height:330px;border:2px dashed #e4c9b8;border-radius:21px;background:linear-gradient(160deg,#fff8f3,#fff);display:grid;place-items:center;text-align:center;position:relative;overflow:hidden;cursor:pointer}.drop.drag{border-color:var(--hot);background:#fff1e9}.drop img{width:100%;height:100%;position:absolute;inset:0;object-fit:cover}.empty{padding:30px;z-index:1}.camera{font-size:3.2rem;display:block;margin-bottom:8px}.file{position:absolute;width:1px;height:1px;opacity:0}.actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}.btn{border:0;border-radius:15px;padding:12px 16px;font-weight:800;cursor:pointer;display:inline-flex;justify-content:center;align-items:center;gap:7px;transition:.18s transform,.18s opacity}.btn:hover{transform:translateY(-2px)}.btn:active{transform:translateY(0)}.primary{background:linear-gradient(135deg,var(--hot),#ff8655);color:#fff;box-shadow:0 10px 20px #ff6b4a38}.secondary{background:#f7eee8;color:var(--ink)}.ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}.full{width:100%}.controls{display:grid;gap:14px}.label{font-size:.85rem;font-weight:800;margin-bottom:7px;display:block}.chips{display:flex;gap:8px;flex-wrap:wrap}.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 12px;cursor:pointer;color:var(--muted);font-weight:700}.chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}textarea{width:100%;min-height:74px;resize:vertical;border:1px solid var(--line);border-radius:14px;padding:12px;outline:none}textarea:focus{border-color:var(--hot)}.notice{background:#fff5d9;border-radius:14px;padding:11px 12px;font-size:.8rem;color:#725c22;line-height:1.5}.result{margin-top:18px;display:none}.result.show{display:block;animation:up .35s ease}@keyframes up{from{opacity:0;transform:translateY(8px)}}.resultbox{background:linear-gradient(145deg,#fff5eb,#fff);border:1px solid #f5ded0;border-radius:20px;padding:18px}.tag{display:inline-block;background:var(--yellow);font-size:.74rem;font-weight:900;padding:5px 9px;border-radius:999px}.joke{font-size:1.35rem;font-weight:900;line-height:1.5;margin:12px 0}.why{color:var(--muted);font-size:.85rem;line-height:1.55}.score{display:flex;gap:7px;align-items:center;font-size:.82rem;color:var(--muted);margin-top:14px}.score button{border:0;background:#f4e8df;border-radius:10px;padding:7px 9px;cursor:pointer}.loading{display:none;text-align:center;padding:18px}.loading.show{display:block}.dots span{display:inline-block;width:8px;height:8px;margin:3px;background:var(--hot);border-radius:50%;animation:b 1s infinite alternate}.dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}@keyframes b{to{transform:translateY(-7px);opacity:.45}}.gallery{margin-top:18px}.gallery-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:12px}.gallery h2{margin:0}.gallery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.memory{background:#fff;border-radius:18px;overflow:hidden;border:1px solid var(--line);box-shadow:0 10px 23px #6e3d1b12}.memory img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}.memory .body{padding:12px}.memory strong{display:block;line-height:1.45;font-size:.9rem}.memory small{display:block;color:var(--muted);margin-top:6px}.empty-gallery{grid-column:1/-1;color:var(--muted);text-align:center;padding:28px;border:1px dashed var(--line);border-radius:18px}.toast{position:fixed;left:50%;bottom:25px;transform:translate(-50%,30px);opacity:0;pointer-events:none;background:#29241f;color:#fff;padding:12px 16px;border-radius:999px;transition:.25s;z-index:10;font-size:.88rem}.toast.show{opacity:1;transform:translate(-50%,0)}.footer-note{font-size:.76rem;color:var(--muted);margin-top:12px;line-height:1.5}
+@media(max-width:760px){.app{padding:12px 12px 100px}.hero{padding:23px 20px;border-radius:25px}.grid{grid-template-columns:1fr}.drop{min-height:285px}.gallery-grid{grid-template-columns:1fr 1fr}.pill{display:none}}@media(max-width:440px){.gallery-grid{grid-template-columns:1fr}.actions .btn{flex:1}.top{margin-top:5px}.joke{font-size:1.15rem}}
+</style>
+</head>
+<body>
+<main class="app">
+<header class="top"><div class="brand"><div class="logo">📸</div><div>クスッとカメラ</div></div><div class="pill">写真は端末内だけで処理する試作版</div></header>
+<section class="hero"><h1>いつもの一枚に、<br>ひとこと笑いを。</h1><p>気になった日常を撮って、笑いの味を選ぶだけ。AI役の「くすお」が、写真に添える短いコメントを考えます。</p><div class="steps"><span>① 撮る</span><span>② 笑いを選ぶ</span><span>③ くすっと生成</span><span>④ 友達へ共有</span></div></section>
+<section class="grid">
+<div class="card"><h2>今日の一枚</h2><p class="sub">人の顔、住所、社員証などが写っていないか確認してから使ってください。</p>
+<label class="drop" id="drop" for="file"><input class="file" id="file" type="file" accept="image/*" capture="environment"><div class="empty" id="empty"><span class="camera">📷</span><strong>タップして撮影・写真を選択</strong><div class="sub" style="margin:8px 0 0">または写真をここにドロップ</div></div><img id="preview" alt="選んだ写真" hidden></label>
+<div class="actions"><label class="btn primary" for="file">📸 写真を選ぶ</label><button class="btn secondary" id="clear">↻ やり直す</button></div>
+</div>
+<div class="card"><h2>どんな笑いにする？</h2><p class="sub">気分に合わせて「くすっ」の温度を変えられます。</p>
+<div class="controls"><div><span class="label">笑いのタイプ</span><div class="chips" id="styles"><button class="chip active" data-style="oyaji">おやじギャグ</button><button class="chip" data-style="tsukkomi">やさしいツッコミ</button><button class="chip" data-style="caption">写真で一言</button><button class="chip" data-style="sf">SF風</button></div></div>
+<div><label class="label" for="hint">写真の説明を少しだけ（任意）</label><textarea id="hint" maxlength="100" placeholder="例：駅前で、植木鉢が人の顔に見えた"></textarea></div>
+<div class="notice">🛡️ 誰かを傷つける笑い、外見いじり、個人情報の推測は生成しません。</div>
+<button class="btn primary full" id="generate">✨ くすっと生成する</button></div>
+<div class="loading" id="loading"><div class="dots"><span></span><span></span><span></span></div><div class="sub">くすおが考え中…</div></div>
+<div class="result" id="result"><div class="resultbox"><span class="tag" id="resultTag">おやじギャグ</span><div class="joke" id="joke"></div><div class="why" id="why"></div><div class="actions"><button class="btn primary" id="share">↗ 共有</button><button class="btn ghost" id="again">🎲 別の案</button><button class="btn ghost" id="save">♡ 保存</button></div><div class="score">この笑いは？ <button data-score="1">😐</button><button data-score="2">🙂</button><button data-score="3">😂</button></div></div></div>
+<p class="footer-note">このHTML単体版では、説明文と選択した雰囲気から端末内でコメント候補を生成します。実運用版では、画像認識AIを安全なバックエンドAPIに接続します。</p>
+</div></section>
+<section class="gallery"><div class="gallery-head"><div><h2>くすっとアルバム</h2><p class="sub" style="margin:4px 0 0">保存した一枚は、この端末のブラウザーに残ります。</p></div><button class="btn ghost" id="clearGallery">全削除</button></div><div class="gallery-grid" id="gallery"></div></section>
+</main><div class="toast" id="toast"></div>
+<script>
+const $=s=>document.querySelector(s); const $$=s=>[...document.querySelectorAll(s)];
+let imageData='', style='oyaji', lastJoke='', lastWhy='';
+const labels={oyaji:'おやじギャグ',tsukkomi:'やさしいツッコミ',caption:'写真で一言',sf:'SF風'};
+const banks={
+oyaji:[
+ h=>`${word(h,'景色')}が気になる？ けしきだけに、消しきれません。`,
+ h=>`この一枚、撮ってもトッテモいい感じ。`,
+ h=>`${word(h,'今日')}の発見、きょう味深いですね。`,
+ h=>`カメラも思わず「これは写メった！」`,
+ h=>`見つけた瞬間、写真だけにシャッターなしではいられない。`],
+tsukkomi:[
+ h=>`いや、そこだけ主役の顔してるやん。`,
+ h=>`日常にしれっと混ざるには、存在感が強すぎます。`,
+ h=>`誰も頼んでないのに、完成度だけ高い。`,
+ h=>`ちょっと待って。${word(h,'これ')}、自分が面白いって分かってる？`,
+ h=>`普通の一日だったはずなのに、急にこの一枚。`],
+caption:[
+ h=>`「本日の主役、本人だけまだ気づいていません」`,
+ h=>`静止画なのに、話しかけてくる。`,
+ h=>`日常、たまに配置を間違える。`,
+ h=>`撮影者だけが見つけた、小さな事件。`,
+ h=>`説明はできない。でも、保存はしたい。`],
+sf:[
+ h=>`西暦3026年。人類はついに${word(h,'この光景')}の意味を知る。`,
+ h=>`地球調査員より報告。「この星、じわじわ面白いです」`,
+ h=>`未来の博物館では「日常」として展示されています。`,
+ h=>`AI解析結果：笑うほどではないが、二度見の価値あり。`,
+ h=>`銀河連邦、${word(h,'これ')}を文化遺産に仮登録。`]
+};
+function word(h,f){if(!h.trim())return f;let t=h.trim().replace(/[。！？!?].*/, '').slice(0,16);return `「${t}」`;}
+function showToast(t){const x=$('#toast');x.textContent=t;x.classList.add('show');setTimeout(()=>x.classList.remove('show'),1800)}
+function loadFile(file){if(!file||!file.type.startsWith('image/'))return showToast('画像ファイルを選んでください');if(file.size>8*1024*1024)return showToast('画像は8MB以下にしてください');const r=new FileReader();r.onload=e=>{imageData=e.target.result;$('#preview').src=imageData;$('#preview').hidden=false;$('#empty').hidden=true;$('#result').classList.remove('show')};r.readAsDataURL(file)}
+$('#file').addEventListener('change',e=>loadFile(e.target.files[0]));
+const drop=$('#drop');['dragenter','dragover'].forEach(n=>drop.addEventListener(n,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(n=>drop.addEventListener(n,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>loadFile(e.dataTransfer.files[0]));
+$('#clear').onclick=()=>{imageData='';$('#file').value='';$('#preview').hidden=true;$('#empty').hidden=false;$('#result').classList.remove('show')};
+$$('.chip').forEach(b=>b.onclick=()=>{$$('.chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');style=b.dataset.style});
+function generate(){if(!imageData)return showToast('まず写真を選んでください');$('#result').classList.remove('show');$('#loading').classList.add('show');setTimeout(()=>{const arr=banks[style];let candidate=arr[Math.floor(Math.random()*arr.length)]($('#hint').value);if(candidate===lastJoke)candidate=arr[(arr.findIndex(fn=>fn($('#hint').value)===candidate)+1)%arr.length]($('#hint').value);lastJoke=candidate;lastWhy=$('#hint').value.trim()?`「${$('#hint').value.trim().slice(0,45)}」という説明から、短く共有しやすい表現にしました。`:'写真を見た人が自由に想像できる、短い一言にしました。';$('#resultTag').textContent=labels[style];$('#joke').textContent=lastJoke;$('#why').textContent=lastWhy;$('#loading').classList.remove('show');$('#result').classList.add('show')},720)}
+$('#generate').onclick=generate;$('#again').onclick=generate;
+$('#share').onclick=async()=>{const text=`${lastJoke}\n#クスッとカメラ`;try{if(navigator.share){const blob=await (await fetch(imageData)).blob();const f=new File([blob],'kusutto.jpg',{type:blob.type});if(navigator.canShare?.({files:[f]}))await navigator.share({title:'クスッとカメラ',text,files:[f]});else await navigator.share({title:'クスッとカメラ',text});}else{await navigator.clipboard.writeText(text);showToast('コメントをコピーしました')}}catch(e){if(e.name!=='AbortError')showToast('共有を完了できませんでした')}};
+function dataSmall(src,max=520){return new Promise(res=>{const im=new Image();im.onload=()=>{const s=Math.min(1,max/im.width);const c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.72))};im.src=src})}
+$('#save').onclick=async()=>{if(!lastJoke)return;const items=JSON.parse(localStorage.getItem('kusuttoItems')||'[]');items.unshift({img:await dataSmall(imageData),joke:lastJoke,date:new Date().toLocaleDateString('ja-JP')});try{localStorage.setItem('kusuttoItems',JSON.stringify(items.slice(0,12)));renderGallery();showToast('アルバムに保存しました')}catch{showToast('保存容量が足りません')}};
+function renderGallery(){const g=$('#gallery');const items=JSON.parse(localStorage.getItem('kusuttoItems')||'[]');if(!items.length){g.innerHTML='<div class="empty-gallery">まだ保存はありません。最初の「くすっ」を残してみましょう。</div>';return}g.innerHTML=items.map((x,i)=>`<article class="memory"><img src="${x.img}" alt="保存した写真"><div class="body"><strong>${escapeHtml(x.joke)}</strong><small>${x.date}</small></div></article>`).join('')}
+function escapeHtml(s){return s.replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+$('#clearGallery').onclick=()=>{if(confirm('アルバムをすべて削除しますか？')){localStorage.removeItem('kusuttoItems');renderGallery();showToast('削除しました')}};$$('[data-score]').forEach(b=>b.onclick=()=>showToast(b.dataset.score==='3'?'大笑い、いただきました！':'反応を記録しました'));renderGallery();
+</script>
+</body></html>
