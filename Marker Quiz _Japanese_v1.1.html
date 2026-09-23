@@ -1,0 +1,3096 @@
+<!DOCTYPE html>
+<html lang="ja" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="マーカーでクイズ">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="教科書やノートの写真・PDFにマーカーを引くだけで4択クイズを自動生成。端末内だけで動くオフライン学習アプリ">
+<title>マーカーでクイズ v1.1</title>
+<style>
+/* ------------------------------------------------------------------
+   テーマ変数（ライト既定・ダーク上書き）。色は必ず変数経由で使う。
+------------------------------------------------------------------ */
+:root {
+  color-scheme: light dark;
+  --bg: #f3f4f7;
+  --card: #ffffff;
+  --card-2: #f7f8fb;
+  --fg: #16181d;
+  --muted: #6b7280;
+  --border: #e3e6ec;
+  --accent: #2563eb;
+  --accent-soft: #dbe7ff;
+  --accent-fg: #ffffff;
+  --ok: #16a34a;
+  --ok-soft: #dcfce7;
+  --ng: #dc2626;
+  --ng-soft: #fee2e2;
+  --warn: #d97706;
+  --stage: #2b2e36;
+  --paper: #fbfaf5;
+  --shadow: 0 1px 3px rgba(0,0,0,.12), 0 6px 20px rgba(0,0,0,.06);
+  --radius: 14px;
+  --font: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", Meiryo, "Segoe UI", Roboto, system-ui, sans-serif;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --card-2: #22262f;
+    --fg: #f1f3f7;
+    --muted: #9aa3b2;
+    --border: #2d323d;
+    --accent: #5b8def;
+    --accent-soft: #1e2a45;
+    --accent-fg: #ffffff;
+    --ok: #34d399;
+    --ok-soft: #123524;
+    --ng: #f87171;
+    --ng-soft: #3b1a1a;
+    --warn: #fbbf24;
+    --stage: #0a0b0e;
+    --paper: #1f2128;
+    --shadow: 0 1px 3px rgba(0,0,0,.5), 0 6px 20px rgba(0,0,0,.35);
+  }
+}
+
+/* ------------------------------------------------------------------
+   ベース
+------------------------------------------------------------------ */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--fg);
+  background: var(--bg);
+  overflow: hidden;
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+h1, h2, h3 { margin: 0 0 8px; line-height: 1.3; }
+h1 { font-size: 26px; }
+h2 { font-size: 20px; }
+h3 { font-size: 17px; }
+p { margin: 0 0 10px; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+.sr-only {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+[hidden] { display: none !important; }
+svg.ic { width: 22px; height: 22px; fill: currentColor; flex: none; }
+
+/* ------------------------------------------------------------------
+   アプリシェル
+------------------------------------------------------------------ */
+#app {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  max-width: 560px;
+  margin-inline: auto;
+  background: var(--bg);
+  padding-top: var(--safe-t);
+}
+.appbar {
+  display: flex; align-items: center; gap: 6px;
+  min-height: 52px; padding: 4px 8px;
+  background: var(--card); border-bottom: 1px solid var(--border);
+}
+.appbar-title { flex: 1; text-align: center; font-weight: 700; font-size: 17px; }
+.icon-btn {
+  width: 44px; height: 44px; border: 0; background: transparent; border-radius: 12px;
+  display: inline-flex; align-items: center; justify-content: center; color: var(--fg);
+}
+.icon-btn:active { background: var(--card-2); }
+.icon-btn[disabled] { opacity: .3; }
+.icon-btn.placeholder { visibility: hidden; }
+
+.stepper {
+  display: flex; justify-content: center; gap: 4px; padding: 6px 10px 4px;
+  background: var(--card); border-bottom: 1px solid var(--border);
+}
+.stepper li {
+  display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted);
+}
+.stepper li::before {
+  content: attr(data-step); display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%; background: var(--card-2); border: 1px solid var(--border);
+  font-size: 10px; font-weight: 700;
+}
+.stepper li.done::before { background: var(--ok); border-color: var(--ok); color: #fff; }
+.stepper li.current { color: var(--fg); font-weight: 700; }
+.stepper li.current::before { background: var(--accent); border-color: var(--accent); color: #fff; }
+.stepper li:not(:last-child) { padding-inline-end: 6px; border-inline-end: 1px solid var(--border); }
+
+.screen { display: none; flex: 1; min-height: 0; flex-direction: column; }
+.screen.active { display: flex; }
+.scroll {
+  flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  padding: 16px 16px calc(16px + var(--safe-b));
+}
+.panel {
+  background: var(--card); border-top: 1px solid var(--border);
+  padding: 10px 14px calc(10px + var(--safe-b));
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+/* ------------------------------------------------------------------
+   ボタン
+------------------------------------------------------------------ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 10px 16px; border-radius: 12px; border: 1px solid transparent;
+  font-weight: 600; font-size: 16px; text-decoration: none; width: 100%;
+  transition: transform .05s ease;
+}
+.btn:active { transform: scale(.985); }
+.btn[disabled] { opacity: .45; pointer-events: none; }
+.btn-primary { background: var(--accent); color: var(--accent-fg); }
+.btn-secondary { background: var(--card); color: var(--fg); border-color: var(--border); box-shadow: var(--shadow); }
+.btn-ghost { background: transparent; color: var(--accent); }
+.btn-danger { background: var(--ng-soft); color: var(--ng); }
+.btn-lg { min-height: 56px; font-size: 17px; }
+.btn-sm { min-height: 40px; font-size: 14px; padding: 6px 12px; width: auto; }
+.btn-row { display: flex; gap: 8px; }
+.btn-row .btn { flex: 1; }
+
+/* ------------------------------------------------------------------
+   ホーム
+------------------------------------------------------------------ */
+.hero { text-align: center; padding: 18px 8px 8px; }
+.logo {
+  width: 84px; height: 84px; margin: 0 auto 12px; border-radius: 24px;
+  background: linear-gradient(135deg, #ffe45c, #ffb300);
+  display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow);
+}
+.logo svg { width: 46px; height: 46px; fill: #3b2f00; }
+.lead { color: var(--muted); font-size: 15px; }
+.lead.small { font-size: 13px; }
+.home-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.home-actions .divider { text-align: center; color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+.footer-note { margin-top: 22px; text-align: center; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.offline-badge {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+  background: var(--ok-soft); color: var(--ok); font-size: 12px; font-weight: 600; margin-bottom: 8px;
+}
+/* デスクトップでファイルをドラッグしてきたときの受け入れ表示 */
+#screen-home.dragover .scroll { outline: 3px dashed var(--accent); outline-offset: -6px; border-radius: 12px; }
+
+/* ------------------------------------------------------------------
+   PDFページ選択
+------------------------------------------------------------------ */
+.pdf-info { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.pdf-info b { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdf-tools { display: flex; gap: 6px; align-items: center; margin-bottom: 12px; }
+.pdf-tools input {
+  flex: 1; min-width: 0; min-height: 40px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--card); padding: 4px 10px; font-size: 15px;
+}
+.pdf-tools input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.pdf-tools .btn-sm { flex: none; padding-inline: 10px; }
+.pdf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+.pdf-page {
+  position: relative; min-width: 0; border: 2px solid var(--border); border-radius: 10px; background: var(--card); padding: 6px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 4px; box-shadow: var(--shadow); text-align: center;
+}
+.pdf-page:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pdf-page[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.pdf-thumb {
+  position: relative; display: flex; width: 100%; min-height: 110px; aspect-ratio: 3 / 4; background: var(--paper); border-radius: 6px; overflow: hidden;
+  align-items: center; justify-content: center;
+}
+/* 縦横比を保って枠内に収める（絶対配置なら % の max-height が確実に効く） */
+.pdf-thumb canvas { position: absolute; inset: 0; margin: auto; max-width: 100%; max-height: 100%; display: block; }
+.pdf-num { font-size: 12px; color: var(--muted); font-weight: 700; }
+.pdf-page[aria-selected="true"] .pdf-num { color: var(--accent); }
+.pdf-check {
+  position: absolute; top: 6px; inset-inline-end: 6px; width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); color: #fff; display: none; align-items: center; justify-content: center; box-shadow: var(--shadow);
+}
+.pdf-check svg.ic { width: 16px; height: 16px; }
+.pdf-page[aria-selected="true"] .pdf-check { display: flex; }
+.pdf-loading { font-size: 11px; color: var(--muted); }
+
+/* ------------------------------------------------------------------
+   マーク画面
+------------------------------------------------------------------ */
+.toolbar {
+  display: flex; justify-content: space-between; align-items: center; gap: 4px;
+  padding: 4px 6px; background: var(--card); border-bottom: 1px solid var(--border);
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.tool-group { display: flex; gap: 0; }
+.tool {
+  min-width: 44px; height: 46px; padding: 2px 6px; border: 0; background: transparent; border-radius: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  color: var(--muted); font-size: 10px; line-height: 1.1; white-space: nowrap;
+}
+.tool svg.ic { width: 20px; height: 20px; }
+.tool[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.tool[disabled] { opacity: .3; }
+.tool.danger { color: var(--ng); }
+
+.palette-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  padding: 4px 8px; background: var(--card); border-bottom: 1px solid var(--border);
+  overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.palette-row::-webkit-scrollbar { display: none; }
+.swatches { display: flex; gap: 0; align-items: center; flex: none; }
+.swatch {
+  width: 35px; height: 44px; border-radius: 10px; border: 0; padding: 0; background: transparent;
+  position: relative; flex: none; display: inline-flex; align-items: center; justify-content: center;
+}
+.swatch::before {
+  content: ""; width: 26px; height: 26px; border-radius: 50%; background: var(--sw); border: 2px solid var(--border); display: block;
+}
+.swatch[aria-checked="true"]::before { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--fg); }
+.swatch.custom::before {
+  background: conic-gradient(#f44336, #ffeb3b, #4caf50, #03a9f4, #9c27b0, #f44336);
+}
+.swatch.custom.picked::before { background: var(--sw); }
+.swatch.custom input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.widths { display: flex; gap: 2px; background: var(--card-2); border-radius: 10px; padding: 2px; flex: none; }
+.wbtn {
+  min-width: 32px; height: 40px; border: 0; background: transparent; border-radius: 8px; font-size: 13px; color: var(--muted);
+}
+.wbtn[aria-pressed="true"] { background: var(--card); color: var(--fg); font-weight: 700; box-shadow: var(--shadow); }
+
+.stage {
+  position: relative; flex: 1; min-height: 140px; background: var(--stage); overflow: hidden;
+  touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+}
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.stage-hint {
+  position: absolute; inset-inline-start: 50%; transform: translateX(-50%); bottom: 10px;
+  background: rgba(0,0,0,.6); color: #fff; font-size: 12px; padding: 4px 12px; border-radius: 999px;
+  pointer-events: none; transition: opacity .4s; max-width: 92%; text-align: center; line-height: 1.35;
+}
+.stage-hint.fade { opacity: 0; }
+.badge-regions {
+  position: absolute; top: 8px; inset-inline-start: 8px; background: rgba(0,0,0,.6); color: #fff;
+  font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; pointer-events: none;
+}
+.badge-regions.has { background: #ff8f00; }
+.stage-zoom {
+  position: absolute; top: 8px; inset-inline-end: 8px; background: rgba(0,0,0,.6); color: #fff; font-size: 11px;
+  padding: 3px 8px; border-radius: 999px; pointer-events: none;
+}
+
+.seg-label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: -4px; }
+.seg { display: flex; background: var(--card-2); border-radius: 12px; padding: 4px; gap: 4px; }
+.seg label { flex: 1; position: relative; display: block; }
+.seg input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; }
+.seg span.seg-item {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  min-height: 46px; border-radius: 9px; font-size: 14px; color: var(--muted); line-height: 1.2;
+}
+.seg .stars { font-size: 11px; letter-spacing: 1px; color: var(--muted); }
+.seg input:checked + span.seg-item { background: var(--card); color: var(--fg); font-weight: 700; box-shadow: var(--shadow); }
+.seg label[data-level="easy"] input:checked + span .stars { color: #22c55e; }
+.seg label[data-level="normal"] input:checked + span .stars { color: #f59e0b; }
+.seg label[data-level="hard"] input:checked + span .stars { color: #ef4444; }
+.seg input:focus-visible + span.seg-item { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+details.opts summary { font-size: 13px; color: var(--accent); cursor: pointer; padding: 2px 0; list-style: none; }
+details.opts summary::-webkit-details-marker { display: none; }
+details.opts summary::before { content: "▸ "; }
+details.opts[open] summary::before { content: "▾ "; }
+.opt-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 0; font-size: 14px; }
+.opt-row select {
+  min-height: 40px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); padding: 4px 10px; font-size: 16px;
+}
+.hint-text { font-size: 12px; color: var(--muted); text-align: center; min-height: 1.2em; }
+
+/* ------------------------------------------------------------------
+   語句の確認
+------------------------------------------------------------------ */
+.term-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.term-item {
+  display: grid; grid-template-columns: 120px 1fr; gap: 10px; align-items: center;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; box-shadow: var(--shadow);
+}
+.term-thumb { position: relative; width: 120px; height: 64px; border-radius: 8px; overflow: hidden; background: var(--paper); }
+.term-thumb canvas { width: 100%; height: 100%; display: block; }
+.num-badge {
+  position: absolute; top: 4px; inset-inline-start: 4px; width: 22px; height: 22px; border-radius: 50%;
+  background: #ff8f00; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.term-field { display: flex; flex-direction: column; gap: 4px; }
+.term-field input {
+  min-height: 44px; border-radius: 10px; border: 1px solid var(--border); background: var(--card-2); padding: 6px 12px; font-size: 16px; width: 100%;
+}
+.term-field input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.term-status { font-size: 11px; color: var(--muted); }
+.term-status.ok { color: var(--ok); font-weight: 600; }
+.term-summary { font-size: 13px; color: var(--muted); text-align: center; }
+
+/* ------------------------------------------------------------------
+   クイズ
+------------------------------------------------------------------ */
+.quiz-top { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 14px; background: var(--card); }
+.q-progress { font-weight: 700; font-variant-numeric: tabular-nums; }
+.q-diff { flex: 1; font-size: 13px; color: var(--muted); }
+.timerbar { height: 6px; background: var(--card-2); }
+.timerfill { height: 100%; width: 100%; background: var(--accent); transition: background .3s; }
+.timerfill.low { background: var(--ng); }
+.q-body { padding-top: 12px; }
+.q-prompt { font-weight: 700; font-size: 17px; margin-bottom: 8px; }
+.q-canvas-wrap {
+  border-radius: var(--radius); overflow: hidden; background: var(--paper); border: 1px solid var(--border); box-shadow: var(--shadow);
+}
+.q-canvas-wrap canvas { display: block; width: 100%; }
+.q-feedback {
+  min-height: 24px; margin: 10px 0 4px; font-weight: 700; font-size: 16px; text-align: center; border-radius: 10px; padding: 6px 10px;
+}
+.q-feedback.ok { background: var(--ok-soft); color: var(--ok); }
+.q-feedback.ng { background: var(--ng-soft); color: var(--ng); }
+.q-feedback.info { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.choices { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.choices.grid { display: grid; grid-template-columns: 1fr 1fr; }
+.choice {
+  position: relative; min-height: 52px; padding: 10px 12px 10px 44px; border-radius: 12px; border: 2px solid var(--border);
+  background: var(--card); text-align: start; font-size: 17px; font-weight: 600; line-height: 1.35; width: 100%; word-break: break-all;
+}
+.choice .letter {
+  position: absolute; inset-inline-start: 10px; top: 50%; transform: translateY(-50%);
+  width: 26px; height: 26px; border-radius: 50%; background: var(--card-2); color: var(--muted); font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.choice.tile { padding: 6px; display: flex; flex-direction: column; gap: 4px; min-height: 80px; }
+.choice.tile .letter { inset-inline-start: 10px; top: 10px; transform: none; z-index: 1; background: rgba(0,0,0,.6); color: #fff; }
+.choice.tile canvas { width: 100%; display: block; border-radius: 8px; background: var(--paper); }
+.choice:active { border-color: var(--accent); }
+.choice.selected { border-color: var(--accent); }
+.choice.correct { border-color: var(--ok); background: var(--ok-soft); }
+.choice.correct .letter { background: var(--ok); color: #fff; }
+.choice.wrong { border-color: var(--ng); background: var(--ng-soft); }
+.choice.wrong .letter { background: var(--ng); color: #fff; }
+.choice.eliminated { opacity: .35; text-decoration: line-through; pointer-events: none; }
+.choice[disabled] { pointer-events: none; }
+.choices.spots { display: grid; grid-template-columns: repeat(4, 1fr); }
+.choices.spots .choice { padding: 10px 0; text-align: center; min-height: 48px; }
+.q-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.hint-box { background: var(--accent-soft); color: var(--accent); border-radius: 10px; padding: 8px 12px; font-size: 14px; text-align: center; }
+
+/* ------------------------------------------------------------------
+   結果・復習
+------------------------------------------------------------------ */
+.score-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+  text-align: center; padding: 18px 14px 14px;
+}
+.score-big { font-size: 48px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.score-total { font-size: 22px; color: var(--muted); font-weight: 600; margin-inline-start: 4px; }
+.score-sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.score-msg { font-weight: 700; margin-top: 8px; font-size: 17px; }
+.result-actions { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 18px; }
+.review-list { display: flex; flex-direction: column; gap: 10px; }
+.review-item {
+  display: grid; grid-template-columns: 96px 1fr auto; gap: 10px; align-items: center;
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; box-shadow: var(--shadow);
+}
+.review-item.ng { border-inline-start: 4px solid var(--ng); }
+.review-item.ok { border-inline-start: 4px solid var(--ok); }
+.review-thumb { width: 96px; height: 60px; border-radius: 8px; overflow: hidden; background: var(--paper); }
+.review-thumb canvas { width: 100%; height: 100%; display: block; }
+.review-text { font-size: 14px; min-width: 0; }
+.review-text .ans { color: var(--muted); }
+.review-text .ans b { color: var(--fg); }
+.review-text .mini { display: inline-flex; gap: 6px; align-items: center; }
+.review-text .mini canvas { width: 56px; height: 32px; border-radius: 4px; background: var(--paper); border: 1px solid var(--border); }
+.review-mark { font-size: 22px; font-weight: 800; }
+.review-mark.ok { color: var(--ok); }
+.review-mark.ng { color: var(--ng); }
+.review-time { font-size: 11px; color: var(--muted); text-align: center; }
+
+/* ------------------------------------------------------------------
+   履歴
+------------------------------------------------------------------ */
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.hist-list { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.hist-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; }
+.hist-head { display: flex; gap: 12px; align-items: center; }
+.hist-thumb { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; background: var(--paper); flex: none; }
+.hist-meta { flex: 1; min-width: 0; font-size: 13px; color: var(--muted); }
+.hist-meta b { display: block; color: var(--fg); font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.src-badge {
+  display: inline-block; vertical-align: middle; font-size: 10px; font-weight: 700; line-height: 1.4;
+  background: var(--accent-soft); color: var(--accent); border-radius: 6px; padding: 1px 6px; margin-inline-start: 6px;
+}
+.hist-attempts { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.attempt {
+  display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 4px 0 4px 8px; border-radius: 8px; background: var(--card-2);
+}
+.attempt .a-diff { font-weight: 700; min-width: 64px; }
+.attempt .a-score { font-weight: 700; font-variant-numeric: tabular-nums; }
+.attempt .a-date { color: var(--muted); flex: 1; }
+.attempt .icon-btn { width: 36px; height: 36px; color: var(--muted); }
+.hist-actions { display: flex; gap: 6px; margin-top: 10px; }
+.hist-actions .btn { flex: 1; }
+.empty { text-align: center; color: var(--muted); padding: 30px 0; }
+
+/* ------------------------------------------------------------------
+   ヘルプ
+------------------------------------------------------------------ */
+.help h2 { margin-top: 18px; font-size: 17px; }
+.help h2:first-child { margin-top: 0; }
+.help ol.steps { list-style: decimal; padding-inline-start: 22px; }
+.help ol.steps li, .help ul.bullets li { margin-bottom: 6px; font-size: 15px; }
+.help ul.bullets { list-style: disc; padding-inline-start: 22px; }
+.help table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 6px 0 10px; }
+.help th, .help td { border: 1px solid var(--border); padding: 6px 6px; text-align: start; vertical-align: top; }
+.help th { background: var(--card-2); font-weight: 700; }
+.help code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; background: var(--card-2); padding: 1px 5px; border-radius: 5px; }
+.help .credit { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); line-height: 1.8; }
+
+/* ------------------------------------------------------------------
+   共通: モーダル・トースト・ローディング
+------------------------------------------------------------------ */
+.modal {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 50;
+}
+.modal-card {
+  background: var(--card); border-radius: 16px; padding: 18px; width: 100%; max-width: 380px; box-shadow: var(--shadow);
+}
+.modal-card p { color: var(--muted); font-size: 15px; white-space: pre-line; }
+.modal-input {
+  width: 100%; min-height: 44px; border-radius: 10px; border: 1px solid var(--border); background: var(--card-2);
+  padding: 6px 12px; font-size: 16px; margin-top: 4px;
+}
+.modal-input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.modal-actions { display: flex; gap: 8px; margin-top: 12px; }
+.modal-actions .btn { flex: 1; }
+.toast {
+  position: fixed; bottom: calc(24px + var(--safe-b)); inset-inline-start: 50%; transform: translateX(-50%);
+  background: #222; color: #fff; padding: 10px 16px; border-radius: 999px; font-size: 14px; z-index: 60;
+  max-width: 90vw; text-align: center; box-shadow: var(--shadow);
+}
+.loading {
+  position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 70; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; color: #fff; font-weight: 600;
+}
+.spinner { width: 36px; height: 36px; border: 4px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 374px) {
+  .stepper { gap: 2px; padding-inline: 6px; }
+  .stepper li { font-size: 10px; }
+  .toolbar { padding: 4px 2px; }
+  .tool { min-width: 40px; padding: 2px 3px; }
+  .palette-row { padding: 4px 4px; }
+  .swatch { width: 32px; }
+  .wbtn { min-width: 30px; }
+}
+@media (min-width: 560px) {
+  #app { border-inline: 1px solid var(--border); }
+}
+@media (max-height: 700px) {
+  .stepper { display: none; }
+  .tool { height: 42px; }
+  .panel { gap: 6px; padding-top: 8px; }
+  .seg-label { display: none; }
+  .seg span.seg-item { min-height: 40px; flex-direction: row; gap: 6px; }
+  .panel .btn-lg { min-height: 48px; font-size: 16px; }
+  .hint-text { font-size: 11px; }
+}
+@media print {
+  :root { --bg: #fff; --card: #fff; --fg: #000; --muted: #555; --border: #999; }
+  @page { margin: 0.75in; }
+  .no-print, .appbar, .stepper, .panel, .toolbar, .palette-row { display: none !important; }
+  tr, td, th { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute;width:0;height:0" aria-hidden="true" focusable="false">
+  <symbol id="i-marker" viewBox="0 0 24 24"><path d="M3 21h6l1.5-1.5-6-6L3 15v6zm3.3-9.9 6.9 6.9 8.5-8.5c.8-.8.8-2 0-2.8L17.6 2.6c-.8-.8-2-.8-2.8 0l-8.5 8.5zM2 22.5h20v1.5H2z"></path></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25zM20.7 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"></path></symbol>
+  <symbol id="i-eraser" viewBox="0 0 24 24"><path d="M16.24 3.56 21.19 8.5c.78.78.78 2.05 0 2.83l-8.49 8.49H21v2H6.5l-4.31-4.31c-.78-.78-.78-2.05 0-2.83l11.22-11.12c.78-.78 2.05-.78 2.83 0zM4.22 14.69 8.5 18.97l3.5-3.5-4.24-4.24-3.54 3.46z"></path></symbol>
+  <symbol id="i-hand" viewBox="0 0 24 24"><path d="M9 11.24V7.5a1.5 1.5 0 0 1 3 0v3.74h1V5.5a1.5 1.5 0 0 1 3 0v5.74h1V7.5a1.5 1.5 0 0 1 3 0V16a6 6 0 0 1-6 6h-1.4a6 6 0 0 1-4.9-2.53l-3.46-4.84a1.5 1.5 0 0 1 2.3-1.9L8 14.5V3.5a1.5 1.5 0 0 1 3 0v7.74h-2z"></path></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62A8 8 0 0 1 12.5 10c3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 10.53 17.15 8 12.5 8z"></path></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="M18.4 10.6A8 8 0 0 0 11.5 8C6.85 8 2.92 10.53 1.54 14.72l2.36.78A8 8 0 0 1 11.5 10c1.96 0 3.73.72 5.12 1.88L13 15.5h9v-9l-3.6 4.1z"></path></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></symbol>
+  <symbol id="i-spot" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"></path></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"></path></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><path d="M11 18h2v-2h-2v2zm1-16a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16zm0-14a4 4 0 0 0-4 4h2a2 2 0 1 1 4 0c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5a4 4 0 0 0-4-4z"></path></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM9 2 7.17 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3.17L15 2H9zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10z"></path></symbol>
+  <symbol id="i-photo" viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5z"></path></symbol>
+  <symbol id="i-pdf" viewBox="0 0 24 24"><path d="M20 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-8.5 7.5c0 .83-.67 1.5-1.5 1.5H9v2H7.5V7H10c.83 0 1.5.67 1.5 1.5v1zm5 2c0 .83-.67 1.5-1.5 1.5h-2.5V7H15c.83 0 1.5.67 1.5 1.5v3zm4-3H19v1h1.5V11H19v2h-1.5V7h3v1.5zM9 9.5h1v-1H9v1zM4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm10 5.5h1v-3h-1v3z"></path></symbol>
+  <symbol id="i-sample" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"></path></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6a7 7 0 1 1 7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.95 8.95 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"></path></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19a7 7 0 0 0-4 12.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26A7 7 0 0 0 12 2z"></path></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"></path></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"></path></symbol>
+</svg>
+
+<div id="app">
+  <header class="appbar">
+    <button class="icon-btn" id="btnBack" type="button" aria-label="戻る"><svg class="ic"><use href="#i-back"></use></svg></button>
+    <div class="appbar-title" id="appTitle">マーカーでクイズ</div>
+    <button class="icon-btn" id="btnHelp" type="button" aria-label="ヘルプ"><svg class="ic"><use href="#i-help"></use></svg></button>
+  </header>
+  <ol class="stepper" id="stepper" aria-label="手順">
+    <li data-step="1" data-key="home">写真/PDF</li>
+    <li data-step="2" data-key="mark">マーク</li>
+    <li data-step="3" data-key="terms">語句</li>
+    <li data-step="4" data-key="quiz">クイズ</li>
+    <li data-step="5" data-key="result">結果</li>
+  </ol>
+
+  <!-- ================= ① 写真（ホーム） ================= -->
+  <section class="screen active" id="screen-home" aria-labelledby="homeHeading">
+    <div class="scroll">
+      <div class="hero">
+        <div class="logo" aria-hidden="true"><svg><use href="#i-marker"></use></svg></div>
+        <h1 id="homeHeading">マーカーでクイズ</h1>
+        <p class="lead">教科書やノートの写真やPDFに指でマーカーを引くと、<br>その場所を隠した4択クイズが自動でできます。</p>
+        <span class="offline-badge"><svg class="ic" style="width:14px;height:14px"><use href="#i-check"></use></svg>オフラインで動作・データは端末内のみ</span>
+      </div>
+      <div class="home-actions">
+        <label class="btn btn-primary btn-lg" for="fileCamera"><svg class="ic"><use href="#i-camera"></use></svg>写真を撮る</label>
+        <input type="file" id="fileCamera" accept="image/*" capture="environment" class="sr-only">
+        <label class="btn btn-secondary btn-lg" for="fileGallery"><svg class="ic"><use href="#i-photo"></use></svg>写真を選ぶ</label>
+        <input type="file" id="fileGallery" accept="image/*" class="sr-only">
+        <label class="btn btn-secondary btn-lg" for="filePdf"><svg class="ic"><use href="#i-pdf"></use></svg>PDFを選ぶ</label>
+        <input type="file" id="filePdf" accept="application/pdf,.pdf" class="sr-only">
+        <p class="divider">— または —</p>
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="btnSample" type="button"><svg class="ic"><use href="#i-sample"></use></svg>サンプルで試す</button>
+          <button class="btn btn-secondary" id="btnDemo" type="button"><svg class="ic"><use href="#i-play"></use></svg>デモを見る</button>
+        </div>
+        <button class="btn btn-ghost" id="btnHistory" type="button"><svg class="ic"><use href="#i-history"></use></svg>履歴を見る</button>
+      </div>
+      <p class="footer-note">作成: Dr. HATAYAMA, SHUNSUKE D.C.(ITL)<br>マーカーでクイズ v1.1 · 2026-09-23</p>
+    </div>
+  </section>
+
+  <!-- ================= ①' PDFのページ選択（PDFを選んだときだけ） ================= -->
+  <section class="screen" id="screen-pdf" aria-label="PDFのページを選ぶ">
+    <div class="scroll">
+      <div class="pdf-info"><b id="pdfName"></b><span class="lead small" id="pdfPages"></span></div>
+      <p class="lead small">クイズにしたいページをタップして選んでください（複数可）。選んだページは1ページずつ「写真」として取り込まれ、あとから「履歴」でも開けます。</p>
+      <div class="pdf-tools">
+        <input type="text" id="pdfRange" autocomplete="off" enterkeyhint="go" placeholder="ページ指定 例: 3-5, 8" aria-label="ページ番号で指定">
+        <button class="btn btn-secondary btn-sm" id="btnPdfRange" type="button">指定</button>
+        <button class="btn btn-secondary btn-sm" id="btnPdfAll" type="button">全選択</button>
+        <button class="btn btn-secondary btn-sm" id="btnPdfNone" type="button">解除</button>
+      </div>
+      <div class="pdf-grid" id="pdfGrid" role="listbox" aria-multiselectable="true" aria-label="ページ一覧"></div>
+    </div>
+    <div class="panel">
+      <div class="hint-text" id="pdfHint">ページをタップして選んでください</div>
+      <button class="btn btn-primary btn-lg" id="btnPdfImport" type="button" disabled>選んだページを取り込む</button>
+    </div>
+  </section>
+
+  <!-- ================= ② マーク ================= -->
+  <section class="screen" id="screen-mark" aria-label="マーク">
+    <div class="toolbar" role="toolbar" aria-label="描画ツール">
+      <div class="tool-group" role="radiogroup" aria-label="ツール">
+        <button class="tool" type="button" data-tool="marker" aria-pressed="true"><svg class="ic"><use href="#i-marker"></use></svg>マーカー</button>
+        <button class="tool" type="button" data-tool="pencil" aria-pressed="false"><svg class="ic"><use href="#i-pencil"></use></svg>鉛筆</button>
+        <button class="tool" type="button" data-tool="eraser" aria-pressed="false"><svg class="ic"><use href="#i-eraser"></use></svg>消しゴム</button>
+        <button class="tool" type="button" data-tool="hand" aria-pressed="false"><svg class="ic"><use href="#i-hand"></use></svg>移動</button>
+      </div>
+      <div class="tool-group">
+        <button class="tool" type="button" id="btnHighlight" aria-pressed="false" aria-label="編集した所を強調"><svg class="ic"><use href="#i-spot"></use></svg>強調</button>
+        <button class="tool" type="button" id="btnUndo" aria-label="元に戻す" disabled><svg class="ic"><use href="#i-undo"></use></svg>戻す</button>
+        <button class="tool" type="button" id="btnRedo" aria-label="やり直す" disabled><svg class="ic"><use href="#i-redo"></use></svg>進む</button>
+        <button class="tool danger" type="button" id="btnClearAll" aria-label="全消し" disabled><svg class="ic"><use href="#i-trash"></use></svg>全消し</button>
+      </div>
+    </div>
+    <div class="palette-row">
+      <div class="swatches" role="radiogroup" aria-label="色" id="swatches">
+        <button class="swatch" type="button" role="radio" aria-checked="true" data-color="#FFEB3B" style="--sw:#FFEB3B" aria-label="黄"></button>
+        <button class="swatch" type="button" role="radio" aria-checked="false" data-color="#FF80AB" style="--sw:#FF80AB" aria-label="ピンク"></button>
+        <button class="swatch" type="button" role="radio" aria-checked="false" data-color="#69F0AE" style="--sw:#69F0AE" aria-label="緑"></button>
+        <button class="swatch" type="button" role="radio" aria-checked="false" data-color="#40C4FF" style="--sw:#40C4FF" aria-label="青"></button>
+        <button class="swatch" type="button" role="radio" aria-checked="false" data-color="#FFAB40" style="--sw:#FFAB40" aria-label="オレンジ"></button>
+        <button class="swatch" type="button" role="radio" aria-checked="false" data-color="#B388FF" style="--sw:#B388FF" aria-label="紫"></button>
+        <span class="swatch custom" id="swatchCustom" role="radio" aria-checked="false" title="任意の色"><input type="color" id="colorPicker" value="#FF5252" aria-label="任意の色を選ぶ"></span>
+      </div>
+      <div class="widths" role="radiogroup" aria-label="線の太さ">
+        <button class="wbtn" type="button" data-width="thin" aria-pressed="false">細</button>
+        <button class="wbtn" type="button" data-width="mid" aria-pressed="true">中</button>
+        <button class="wbtn" type="button" data-width="thick" aria-pressed="false">太</button>
+      </div>
+    </div>
+    <div class="stage" id="stage">
+      <canvas id="markCanvas" aria-label="写真にマーカーを引くキャンバス" role="img"></canvas>
+      <div class="badge-regions" id="regionBadge">まだマークがありません</div>
+      <div class="stage-zoom" id="zoomBadge">100%</div>
+      <div class="stage-hint" id="stageHint">1本指で描く・2本指でズーム/移動</div>
+    </div>
+    <div class="panel">
+      <div class="seg-label" id="diffLabel">難易度</div>
+      <div class="seg" role="radiogroup" aria-labelledby="diffLabel" id="diffSeg">
+        <label data-level="easy"><input type="radio" name="difficulty" value="easy"><span class="seg-item">やさしい<span class="stars">★</span></span></label>
+        <label data-level="normal"><input type="radio" name="difficulty" value="normal" checked><span class="seg-item">中<span class="stars">★★</span></span></label>
+        <label data-level="hard"><input type="radio" name="difficulty" value="hard"><span class="seg-item">難しい<span class="stars">★★★</span></span></label>
+      </div>
+      <details class="opts">
+        <summary>問題数・出題形式を変える</summary>
+        <div class="opt-row"><label for="selCount">問題数</label>
+          <select id="selCount"><option value="all">全部（最大10）</option><option value="5">5問</option><option value="10">10問</option></select></div>
+        <div class="opt-row"><label for="selMode">出題形式</label>
+          <select id="selMode"><option value="auto">自動（語句があれば文字）</option><option value="image">画像で選ぶ</option><option value="text">文字で選ぶ</option></select></div>
+      </details>
+      <button class="btn btn-primary btn-lg" id="btnMakeQuiz" type="button" disabled>クイズを作る</button>
+      <div class="hint-text" id="makeHint">2か所以上マークするとクイズを作れます</div>
+    </div>
+  </section>
+
+  <!-- ================= ③ 語句の確認 ================= -->
+  <section class="screen" id="screen-terms" aria-label="語句の確認">
+    <div class="scroll">
+      <h2>語句の確認 <span id="termsCount" class="lead small"></span></h2>
+      <p class="lead small">隠れている語句を入力すると<b>文字の4択</b>になります。未入力の箇所は<b>画像の4択</b>で出題されます。入力は任意です。</p>
+      <div class="term-list" id="termList"></div>
+    </div>
+    <div class="panel">
+      <div class="term-summary" id="termSummary"></div>
+      <button class="btn btn-primary btn-lg" id="btnStartQuiz" type="button">クイズを始める</button>
+      <button class="btn btn-secondary" id="btnSkipTerms" type="button">文字入力をスキップして画像だけで出題</button>
+    </div>
+  </section>
+
+  <!-- ================= ④ クイズ ================= -->
+  <section class="screen" id="screen-quiz" aria-label="クイズ">
+    <div class="quiz-top">
+      <span class="q-progress" id="qProgress">1/1</span>
+      <span class="q-diff" id="qDiff"></span>
+      <button class="icon-btn" id="btnQuitQuiz" type="button" aria-label="クイズを中断"><svg class="ic"><use href="#i-close"></use></svg></button>
+    </div>
+    <div class="timerbar" id="timerBar" hidden><div class="timerfill" id="timerFill"></div></div>
+    <div class="scroll q-body">
+      <div class="q-prompt" id="qPrompt"></div>
+      <div class="q-canvas-wrap"><canvas id="qCanvas" role="img" aria-label="問題の画像"></canvas></div>
+      <div class="q-feedback" id="qFeedback" role="status"></div>
+      <div class="choices" id="choices"></div>
+      <div class="q-actions" id="qActions">
+        <div class="hint-box" id="hintBox" hidden></div>
+        <button class="btn btn-secondary" id="btnHint" type="button" hidden><svg class="ic"><use href="#i-bulb"></use></svg>ヒント</button>
+        <button class="btn btn-primary btn-lg" id="btnNext" type="button" hidden>次へ</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ⑤ 結果 ================= -->
+  <section class="screen" id="screen-result" aria-label="結果">
+    <div class="scroll">
+      <div class="score-card">
+        <div class="score-sub" id="resDiff"></div>
+        <div><span class="score-big" id="resCorrect">0</span><span class="score-total" id="resTotal">/ 0</span></div>
+        <div class="score-sub" id="resDetail"></div>
+        <div class="score-msg" id="resMsg"></div>
+      </div>
+      <div class="result-actions">
+        <button class="btn btn-primary" id="btnRetryWrong" type="button">間違えた問題だけもう一度</button>
+        <button class="btn btn-secondary" id="btnRetrySame" type="button">同じ難易度でもう一度</button>
+        <button class="btn btn-secondary" id="btnRetryHarder" type="button">難易度を上げて再挑戦</button>
+        <div class="seg-label">難易度を変えてもう一度</div>
+        <div class="seg" role="radiogroup" aria-label="難易度（結果画面）" id="resDiffSeg">
+          <label data-level="easy"><input type="radio" name="difficulty2" value="easy"><span class="seg-item">やさしい<span class="stars">★</span></span></label>
+          <label data-level="normal"><input type="radio" name="difficulty2" value="normal"><span class="seg-item">中<span class="stars">★★</span></span></label>
+          <label data-level="hard"><input type="radio" name="difficulty2" value="hard"><span class="seg-item">難しい<span class="stars">★★★</span></span></label>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="btnBackToMark" type="button">マークを編集</button>
+          <button class="btn btn-secondary" id="btnResHome" type="button">ホームへ</button>
+        </div>
+      </div>
+      <h3>復習</h3>
+      <div class="review-list" id="reviewList"></div>
+    </div>
+  </section>
+
+  <!-- ================= 履歴 ================= -->
+  <section class="screen" id="screen-history" aria-label="履歴">
+    <div class="scroll">
+      <div class="row-between">
+        <h2>履歴</h2>
+        <div>
+          <label class="btn btn-sm btn-secondary" for="fileImport"><svg class="ic"><use href="#i-upload"></use></svg>読み込み</label>
+          <input type="file" id="fileImport" accept="application/json,.json" class="sr-only">
+        </div>
+      </div>
+      <p class="lead small">写真・マーク・成績はこの端末の中（ブラウザのIndexedDB）だけに保存されます。</p>
+      <div class="hist-list" id="histList"></div>
+    </div>
+  </section>
+
+  <!-- ================= ヘルプ ================= -->
+  <section class="screen" id="screen-help" aria-label="ヘルプ">
+    <div class="scroll help">
+      <h2>使い方</h2>
+      <ol class="steps">
+        <li><b>写真 / PDF</b>：教科書・ノート・プリントを撮る（または写真・PDFを選ぶ）。PDFは取り込むページを選べます。まずは「サンプルで試す」「デモを見る」でも。</li>
+        <li><b>マーク</b>：覚えたい語句を指でマーカー（色は自由）。鉛筆で下線や丸囲みもOK。2本指でズーム/移動。「強調」で出題される場所を確認。</li>
+        <li><b>難易度</b>を「やさしい / 中 / 難しい」から選び、<b>「クイズを作る」</b>。</li>
+        <li><b>語句</b>：隠れている語句を入力すると文字の4択に。スキップすれば画像の4択だけで出題。</li>
+        <li><b>クイズ</b>：隠された場所（赤シート）に入るものを4つから選ぶ。</li>
+        <li><b>結果</b>：復習して「間違えた問題だけ」「難易度を上げて」再挑戦。</li>
+      </ol>
+      <h2>PDFについて</h2>
+      <ul class="bullets">
+        <li>PDFの各ページを長辺1600pxの画像に変換して取り込みます。複数ページを選ぶとページごとに履歴に並び、1ページずつクイズにできます。</li>
+        <li>PDFの表示には Mozilla の <b>pdf.js</b>（Apache License 2.0）を使います。<b>初回だけ</b>インターネットから部品をダウンロードするため通信が必要です（PDFの内容そのものは外部に送信されません）。</li>
+        <li>完全オフラインで使うには、このHTMLと同じフォルダーに <code>pdf.min.js</code> と <code>pdf.worker.min.js</code>（pdfjs-dist 3.11.174 の legacy/build）を置いてください。日本語フォントが埋め込まれていないPDFのために <code>cmaps/</code>・<code>standard_fonts/</code> フォルダーも一緒に置くとより確実です。</li>
+        <li>パスワード付きPDFはパスワードの入力を求めます。</li>
+        <li>スマートフォンでは「ファイル」アプリ（iPhone）や「ファイル」「ドライブ」（Android）からPDFを選べます。</li>
+      </ul>
+      <h2>難易度の違い</h2>
+      <table>
+        <thead><tr><th></th><th>やさしい ★</th><th>中 ★★</th><th>難しい ★★★</th></tr></thead>
+        <tbody>
+          <tr><th>隠す場所</th><td>出題箇所のみ</td><td>出題箇所のみ</td><td>マークした全箇所</td></tr>
+          <tr><th>他のマーカー</th><td>見える</td><td>見えない（素の写真）</td><td>すべて隠す</td></tr>
+          <tr><th>周辺の表示</th><td>広い（約3倍）</td><td>中（約2倍）</td><td>狭い（約1.5倍）</td></tr>
+          <tr><th>制限時間</th><td>なし</td><td>1問20秒</td><td>1問10秒</td></tr>
+          <tr><th>ヒント</th><td>あり</td><td>なし</td><td>なし</td></tr>
+          <tr><th>誤答</th><td>明らかに違うもの</td><td>同じくらいの長さ</td><td>最も紛らわしい（変形・同種）</td></tr>
+          <tr><th>出題形式</th><td>穴埋め</td><td>穴埋め</td><td>穴埋め＋逆引き（語句→場所）を混在</td></tr>
+          <tr><th>正誤表示</th><td>すぐ</td><td>すぐ</td><td>結果画面でまとめて（速答ボーナスあり）</td></tr>
+        </tbody>
+      </table>
+      <h2>ホーム画面に追加して使う</h2>
+      <ul class="bullets">
+        <li><b>iPhone（Safari）</b>：共有ボタン → 「ホーム画面に追加」。</li>
+        <li><b>Android（Chrome）</b>：メニュー（⋮） → 「ホーム画面に追加」または「アプリをインストール」。</li>
+        <li>このファイルを端末に保存（ファイルアプリ・Google ドライブなど）して開いても動きます。</li>
+      </ul>
+      <h2>データについて</h2>
+      <ul class="bullets">
+        <li>写真・マーク・語句・成績は<b>この端末のブラウザ内（IndexedDB）</b>にだけ保存され、外部には送信されません。</li>
+        <li>写真・PDFのページは長辺1600pxに縮小したJPEGとして保存します。履歴画面から個別に削除、JSONで書き出し/読み込みができます。</li>
+        <li>ブラウザのサイトデータを消去するとデータも消えます。大切なものは「書き出し」で保存してください。</li>
+      </ul>
+      <h2>バックエンドについて</h2>
+      <p class="lead small">このアプリは1つのHTMLファイルの中で「フロントエンド（画面・描画）」と「バックエンド（保存・領域検出・クイズ生成・採点）」を分けて実装しています。バックエンドは <code>LocalBackend</code> クラスとして端末内で動作し、写真を外部へ送りません。同じAPIを持つ <code>RemoteBackend</code>（サーバー版のひな形）に差し替えればクラウド同期版にも拡張できます。</p>
+      <div class="credit">
+        作成: Dr. HATAYAMA, SHUNSUKE D.C.(ITL)<br>
+        マーカーでクイズ v1.1 · 2026-09-23<br>
+        サンプルページの文章は一般的な理科の要約文で、実在の人物は登場しません。
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+<div id="loading" class="loading" hidden><div class="spinner" aria-hidden="true"></div><div id="loadingText">読み込み中…</div></div>
+<script>
+'use strict';
+/* =====================================================================
+ *  ██████  BACKEND LAYER（サーバー相当・端末内で動作）  ██████
+ *
+ *  このセクションは「サーバー側」に相当します。UIは一切触らず、
+ *  すべて Promise を返す REST 風 API だけを公開します。
+ *
+ *    createSession(imageBlob, meta)        POST   /api/sessions
+ *    getSession(id)                        GET    /api/sessions/:id
+ *    saveMarks(sessionId, strokes)         PUT    /api/sessions/:id/marks   → regions
+ *    detectRegions(sessionId)              POST   /api/sessions/:id/regions
+ *    saveTerms(sessionId, terms)           PUT    /api/sessions/:id/terms
+ *    generateQuiz(sessionId, options)      POST   /api/sessions/:id/quizzes
+ *    submitAnswer(quizId, index, choice, elapsedMs)
+ *                                          POST   /api/quizzes/:id/answers
+ *    finishQuiz(quizId)                    POST   /api/quizzes/:id/finish
+ *    listHistory()                         GET    /api/history
+ *    deleteSession(id) / deleteQuiz(id)    DELETE /api/sessions/:id, /api/quizzes/:id
+ *    exportSession(id) / importSession(json)
+ *
+ *  永続化: IndexedDB（DB名 markerQuizDB）。写真は長辺1600pxのJPEG(品質0.8)を
+ *  ArrayBuffer で保存（localStorage は容量不足のため不使用）。IndexedDB が使えない
+ *  環境（サンドボックス iframe 等）ではメモリ上のストアに自動フォールバックします。
+ *
+ *  PDF の取り込み（v1.1）: フロントエンドが pdf.js（初回のみ遅延取得）で各ページを画像化し、
+ *  通常の「写真」セッションとして createSession に渡します。session.source に由来
+ *  （{type:'pdf', file, page, pages}）を残すだけで、この層の処理は写真と全く同じです。
+ *
+ *  クイズ生成・選択肢生成・難易度ポリシー・採点などのビジネスロジックは
+ *  すべてこの層にあります。フロントエンドはこの API だけを呼びます。
+ * ===================================================================== */
+
+const BU = {
+  uid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  },
+  clamp(v, a, b) { return Math.max(a, Math.min(b, v)); },
+  shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  },
+  pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; },
+  rectsIntersect(a, b, gap) {
+    gap = gap || 0;
+    return !(a.x + a.w + gap < b.x || b.x + b.w + gap < a.x || a.y + a.h + gap < b.y || b.y + b.h + gap < a.y);
+  },
+  rectUnion(a, b) {
+    const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
+    return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+  },
+  clampRect(r, W, H) {
+    const x = BU.clamp(r.x, 0, W), y = BU.clamp(r.y, 0, H);
+    const x2 = BU.clamp(r.x + r.w, 0, W), y2 = BU.clamp(r.y + r.h, 0, H);
+    return { x, y, w: Math.max(1, x2 - x), h: Math.max(1, y2 - y) };
+  },
+  roundRect(r) { return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.w), h: Math.round(r.h) }; },
+  norm(s) { return String(s || '').replace(/\s+/g, '').toLowerCase(); },
+  chars(s) { return Array.from(String(s || '')); }
+};
+
+/* ---------------------------------------------------------------------
+ * 難易度ポリシー（体感で明確に差が出るようにパラメータ化）
+ * ------------------------------------------------------------------- */
+const DIFFICULTY_POLICY = {
+  easy: {
+    key: 'easy', label: 'やさしい', stars: '★', order: 0,
+    contextFactor: 3.0, minContextW: 0.65, minContextH: 0.16,
+    maskAll: false, showOtherHighlights: true,
+    timeLimitMs: null, hint: true, immediateFeedback: true, speedBonus: false,
+    mixTypes: false
+  },
+  normal: {
+    key: 'normal', label: '中', stars: '★★', order: 1,
+    contextFactor: 2.0, minContextW: 0.50, minContextH: 0.11,
+    maskAll: false, showOtherHighlights: false,
+    timeLimitMs: 20000, hint: false, immediateFeedback: true, speedBonus: false,
+    mixTypes: false
+  },
+  hard: {
+    key: 'hard', label: '難しい', stars: '★★★', order: 2,
+    contextFactor: 1.5, minContextW: 0.36, minContextH: 0.07,
+    maskAll: true, showOtherHighlights: false,
+    timeLimitMs: 10000, hint: false, immediateFeedback: false, speedBonus: true,
+    mixTypes: true
+  }
+};
+const DIFFICULTY_ORDER = ['easy', 'normal', 'hard'];
+
+/* ---------------------------------------------------------------------
+ * 領域検出: ストローク（画像座標のベクトル）→ ハイライト領域
+ *  - マーカー: ストロークの bbox
+ *  - 鉛筆: 下線なら上方向に画像高さの約4%拡張、閉じた丸囲みなら bbox、その他は少し拡張
+ *  - 互いに重なる/近い（画像幅の約1.5%以内）bbox は統合
+ *  - 既存領域と同じストロークを含む領域は id と語句を引き継ぐ
+ * ------------------------------------------------------------------- */
+function detectRegionsFromStrokes(strokes, imgW, imgH, prevRegions) {
+  prevRegions = prevRegions || [];
+  const shortSide = Math.min(imgW, imgH);
+  const boxes = [];
+  for (const s of strokes) {
+    const pts = s.points || [];
+    if (!pts.length) continue;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, len = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+      if (i > 0) len += Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y);
+    }
+    const width = s.width || 4, half = width / 2;
+    const bw = maxX - minX, bh = maxY - minY;
+    let box, kind = 'marker';
+    if (s.tool === 'pencil') {
+      const first = pts[0], last = pts[pts.length - 1];
+      const closeDist = Math.hypot(first.x - last.x, first.y - last.y);
+      const diag = Math.hypot(bw, bh) || 1;
+      const minSize = shortSide * 0.02;
+      if (bw > minSize && bh > minSize && closeDist < 0.3 * diag && len > 2 * diag) {
+        kind = 'circle';
+        box = { x: minX, y: minY, w: bw, h: bh };
+      } else if (bh < 0.35 * bw || bh < imgH * 0.03) {
+        kind = 'underline';
+        const up = imgH * 0.04;
+        box = { x: minX - imgW * 0.005, y: minY - up, w: bw + imgW * 0.01, h: bh + up + imgH * 0.006 };
+      } else {
+        kind = 'pencil';
+        box = { x: minX - imgW * 0.01, y: minY - imgH * 0.008, w: bw + imgW * 0.02, h: bh + imgH * 0.016 };
+      }
+    } else {
+      box = { x: minX - half, y: minY - half, w: bw + width, h: bh + width };
+    }
+    box = BU.clampRect(box, imgW, imgH);
+    boxes.push({ x: box.x, y: box.y, w: box.w, h: box.h, strokeIds: [s.id], kinds: [kind] });
+  }
+  // 統合
+  const gap = imgW * 0.015;
+  let merged = true;
+  while (merged) {
+    merged = false;
+    outer: for (let i = 0; i < boxes.length; i++) {
+      for (let j = i + 1; j < boxes.length; j++) {
+        if (BU.rectsIntersect(boxes[i], boxes[j], gap)) {
+          const u = BU.rectUnion(boxes[i], boxes[j]);
+          boxes[i] = { x: u.x, y: u.y, w: u.w, h: u.h, strokeIds: boxes[i].strokeIds.concat(boxes[j].strokeIds), kinds: boxes[i].kinds.concat(boxes[j].kinds) };
+          boxes.splice(j, 1);
+          merged = true;
+          break outer;
+        }
+      }
+    }
+  }
+  // 最小サイズ
+  const minW = imgW * 0.03, minH = imgH * 0.025;
+  for (const b of boxes) {
+    if (b.w < minW) { b.x -= (minW - b.w) / 2; b.w = minW; }
+    if (b.h < minH) { b.y -= (minH - b.h) / 2; b.h = minH; }
+    const c = BU.clampRect(b, imgW, imgH);
+    b.x = c.x; b.y = c.y; b.w = c.w; b.h = c.h;
+  }
+  // 読み順（行→左から右）
+  boxes.sort((a, b) => (a.y + a.h / 2) - (b.y + b.h / 2));
+  const rowTol = imgH * 0.035;
+  const rows = [];
+  for (const b of boxes) {
+    const cy = b.y + b.h / 2;
+    const row = rows.length ? rows[rows.length - 1] : null;
+    if (row && Math.abs(row.cy - cy) <= rowTol) { row.items.push(b); row.cy = (row.cy * (row.items.length - 1) + cy) / row.items.length; }
+    else rows.push({ cy, items: [b] });
+  }
+  const ordered = [];
+  for (const row of rows) { row.items.sort((a, b) => a.x - b.x); ordered.push(...row.items); }
+  // id・語句の引き継ぎ
+  const usedIds = new Set();
+  return ordered.map((b, i) => {
+    let inherit = null, best = 0;
+    for (const pr of prevRegions) {
+      if (usedIds.has(pr.id)) continue;
+      const shared = (pr.strokeIds || []).filter(id => b.strokeIds.includes(id)).length;
+      if (shared > best) { best = shared; inherit = pr; }
+    }
+    if (inherit) usedIds.add(inherit.id);
+    const kindCount = {};
+    for (const k of b.kinds) kindCount[k] = (kindCount[k] || 0) + 1;
+    const kind = Object.keys(kindCount).sort((a, c) => kindCount[c] - kindCount[a])[0] || 'marker';
+    const r = BU.roundRect(b);
+    return { id: inherit ? inherit.id : BU.uid(), index: i + 1, x: r.x, y: r.y, w: r.w, h: r.h, strokeIds: b.strokeIds, kind, term: inherit ? (inherit.term || '') : '' };
+  });
+}
+
+/* ---------------------------------------------------------------------
+ * 文字の誤答生成
+ *  優先順: 同じ写真の他領域の語句 → 過去セッションの語句 → 正解の変形
+ *  難易度で「明らかに違う / 同程度の長さ / 最も紛らわしい」を切り替える
+ * ------------------------------------------------------------------- */
+const SIMILAR_CHAR_PAIRS = [
+  ['大', '太'], ['未', '末'], ['己', '已'], ['ぬ', 'め'], ['シ', 'ツ'], ['ソ', 'ン'], ['干', '千'], ['士', '土'],
+  ['王', '玉'], ['日', '目'], ['木', '本'], ['人', '入'], ['天', '夫'], ['力', '刀'], ['白', '百'], ['石', '右'],
+  ['休', '体'], ['待', '持'], ['鳥', '烏'], ['ろ', 'る'], ['わ', 'ね'], ['さ', 'ち'], ['き', 'さ'], ['ク', 'ケ'],
+  ['コ', 'ユ'], ['ス', 'ヌ'], ['微', '徴'], ['復', '複'], ['積', '績'], ['験', '検'], ['講', '構'], ['受', '授'],
+  ['低', '底'], ['科', '料'], ['化', '花'], ['気', '汽'], ['動', '働'], ['折', '析'], ['幣', '弊'], ['測', '則'],
+  ['管', '官'], ['道', '導'], ['散', '酸'], ['蒸', '蓁'], ['融', '触'], ['固', '個'], ['液', '夜'], ['素', '索'],
+  ['a', 'e'], ['i', 'l'], ['m', 'n'], ['c', 'e'], ['o', 'a'], ['u', 'v'], ['b', 'd'], ['p', 'q']
+];
+const SIMILAR_CHAR_MAP = (() => {
+  const m = new Map();
+  for (const [a, b] of SIMILAR_CHAR_PAIRS) {
+    if (!m.has(a)) m.set(a, []); if (!m.has(b)) m.set(b, []);
+    m.get(a).push(b); m.get(b).push(a);
+  }
+  // 濁点・半濁点のトグル（ひらがな・カタカナ）
+  const rows = ['かがきぎくぐけげこごさざしじすずせぜそぞただちぢつづてでとどはばひびふぶへべほぼ', 'カガキギクグケゲコゴサザシジスズセゼソゾタダチヂツヅテデトドハバヒビフブヘベホボ'];
+  for (const row of rows) for (let i = 0; i < row.length; i += 2) {
+    const a = row[i], b = row[i + 1];
+    if (!m.has(a)) m.set(a, []); if (!m.has(b)) m.set(b, []);
+    m.get(a).push(b); m.get(b).push(a);
+  }
+  const han = [['は', 'ぱ'], ['ひ', 'ぴ'], ['ふ', 'ぷ'], ['へ', 'ぺ'], ['ほ', 'ぽ'], ['ハ', 'パ'], ['ヒ', 'ピ'], ['フ', 'プ'], ['ヘ', 'ペ'], ['ホ', 'ポ']];
+  for (const [a, b] of han) { if (!m.has(a)) m.set(a, []); if (!m.has(b)) m.set(b, []); m.get(a).push(b); m.get(b).push(a); }
+  return m;
+})();
+const TERM_SUFFIXES = ['的', '性', '化', '法', '論', '式', '体', '率', '量', '素', '質', '系', '作用', '反応', '運動', '現象'];
+const FALLBACK_VOCAB = [
+  '光合成', '蒸散', '呼吸', '消化', '酸性', '中性', 'アルカリ性', '融点', '沸点', '密度', '慣性', '電流', '抵抗', '電圧', '気圧', '前線',
+  '火成岩', '堆積岩', '震源', '地軸', '公転', '自転', '惑星', '恒星', '葉緑体', '細胞膜', '染色体', '食物連鎖', '分解者', '二酸化炭素',
+  '酸素', '水素', '窒素', '中和', '還元', '酸化', '凝固', '昇華', '屈折', '反射', '振動数', '電磁誘導', '三権分立', '国会', '内閣',
+  '裁判所', '憲法', '選挙', '地方自治', '貿易', '関税', '需要', '供給', '赤道', '本初子午線', '季節風', '扇状地', '三角州', '盆地',
+  '台地', '平野', '高原', '律令', '荘園', '幕府', '参勤交代', '鎖国', '産業革命', '比例', '反比例', '方程式', '関数', '平行', '垂直',
+  '二等辺三角形', '円周率', '確率', '平均値', '中央値', '素数', '約数', '倍数', '累乗', '平方根', '相似', '合同', '主語', '述語',
+  '修飾語', '比喩', '対義語', '類義語', '敬語', '熟語', 'noun', 'verb', 'adjective', 'adverb', 'subject', 'object', '1603年', '1868年',
+  '100℃', '0℃', '約4分の3', '3分の1', '12', '24', '360度', '90度'
+];
+
+function charType(s) {
+  const t = BU.norm(s);
+  if (/^[0-9０-９.,．，%％℃年月日]+$/.test(t)) return 'num';
+  if (/^[\u3040-\u309f\u30a0-\u30ffー]+$/.test(t)) return 'kana';
+  if (/^[\u4e00-\u9fff]+$/.test(t)) return 'kanji';
+  if (/^[a-z]+$/i.test(t)) return 'latin';
+  return 'mixed';
+}
+function termSimilarity(a, b) {
+  const ca = BU.chars(BU.norm(a)), cb = BU.chars(BU.norm(b));
+  const la = ca.length, lb = cb.length, mx = Math.max(la, lb, 1);
+  const lenSim = 1 - Math.abs(la - lb) / mx;
+  const setA = new Set(ca); let shared = 0;
+  for (const c of cb) if (setA.has(c)) shared++;
+  const charSim = shared / mx;
+  const typeSim = charType(a) === charType(b) ? 1 : 0;
+  return lenSim * 0.4 + charSim * 0.4 + typeSim * 0.2;
+}
+/** 正解の変形候補（紛らわしい誤答）を生成。紛らわしい順（長さ維持 → 入替 → 接尾語 → 削除）に返す */
+function mutateTerm(term) {
+  const seen = new Set([BU.norm(term)]);
+  const tiers = [[], [], [], []];
+  const chars = BU.chars(term);
+  const isDigit = c => /[0-9０-９]/.test(c);
+  const push = (tier, str) => { const n = BU.norm(str); if (!n || seen.has(n)) return; seen.add(n); tiers[tier].push(str); };
+  // 数字を含む: ±1 / ±10 / 倍・半分 / 桁入替 / 年号は±数年
+  const numRe = /\d+/g; let m;
+  while ((m = numRe.exec(term)) !== null) {
+    const nStr = m[0], n = parseInt(nStr, 10), start = m.index, end = start + nStr.length;
+    const rep = v => term.slice(0, start) + String(v) + term.slice(end);
+    const isYear = nStr.length === 4 && n > 1000 && n < 2100;
+    if (isYear) { for (const d of BU.shuffle([-7, -5, -3, -2, 2, 3, 5, 7, 10, -10])) push(0, rep(n + d)); }
+    else {
+      push(0, rep(n + 1)); if (n - 1 >= 0) push(0, rep(n - 1)); push(0, rep(n + 10)); if (n - 10 >= 0) push(0, rep(n - 10));
+      push(1, rep(n * 2)); if (n % 2 === 0 && n > 0) push(1, rep(n / 2));
+      if (nStr.length >= 2) { for (let i = 0; i < nStr.length - 1; i++) { const d = nStr.split(''); if (d[i] === d[i + 1]) continue; const t = d[i]; d[i] = d[i + 1]; d[i + 1] = t; if (d[0] !== '0') push(0, rep(d.join(''))); } }
+    }
+  }
+  // 類似字・濁点の入替（長さ維持）
+  chars.forEach((c, i) => {
+    const alts = SIMILAR_CHAR_MAP.get(c);
+    if (alts) for (const a of alts) push(0, chars.slice(0, i).concat([a], chars.slice(i + 1)).join(''));
+  });
+  // 隣接文字の入替（数字と非数字はまたがない）
+  if (chars.length >= 3) for (let i = 0; i < chars.length - 1; i++) {
+    if (chars[i] === chars[i + 1] || isDigit(chars[i]) !== isDigit(chars[i + 1])) continue;
+    const c = chars.slice(); const t = c[i]; c[i] = c[i + 1]; c[i + 1] = t; push(1, c.join(''));
+  }
+  // 接尾語の付替 / 追加
+  const suf = TERM_SUFFIXES.find(x => term.endsWith(x) && term.length > x.length);
+  if (suf) { const base = term.slice(0, term.length - suf.length); for (const x of TERM_SUFFIXES) if (x !== suf) push(2, base + x); }
+  else if (charType(term) !== 'num' && charType(term) !== 'latin' && chars.length <= 5) { for (const x of ['性', '化', '法', '体', '素']) push(3, term + x); }
+  // 1文字削除（4文字以上）
+  if (chars.length >= 4 && charType(term) !== 'num') { push(3, chars.slice(1).join('')); push(3, chars.slice(0, -1).join('')); }
+  return [].concat(BU.shuffle(tiers[0]), BU.shuffle(tiers[1]), BU.shuffle(tiers[2]), BU.shuffle(tiers[3]));
+}
+/** 難易度別に3つの誤答を返す（正解と重複せず、すべて異なる） */
+function buildTextDistractors(correct, difficulty, pools) {
+  const used = new Set([BU.norm(correct)]);
+  const out = [];
+  const add = t => { const n = BU.norm(t); if (!n || used.has(n)) return false; used.add(n); out.push(t); return out.length >= 3; };
+  const clean = arr => (arr || []).map(t => String(t).trim()).filter(t => t && BU.norm(t) !== BU.norm(correct));
+  const session = clean(pools.sameSession), past = clean(pools.past), fallback = clean(FALLBACK_VOCAB);
+  const mutations = mutateTerm(correct);
+  const len = BU.chars(correct).length;
+  const bySim = (arr, desc) => arr.slice().sort((a, b) => desc ? termSimilarity(b, correct) - termSimilarity(a, correct) : termSimilarity(a, correct) - termSimilarity(b, correct));
+  const nearLen = arr => arr.filter(t => Math.abs(BU.chars(t).length - len) <= 1);
+
+  let order;
+  if (difficulty === 'hard') {
+    // 最も紛らわしい: 変形と同セッションの類似語を交互に → 過去 → 汎用語彙（類似順）
+    const a = mutations, b = bySim(session, true), c = bySim(past, true), d = bySim(fallback, true);
+    order = [];
+    for (let i = 0; i < Math.max(a.length, b.length); i++) { if (i < a.length) order.push(a[i]); if (i < b.length) order.push(b[i]); }
+    order = order.concat(c, d);
+  } else if (difficulty === 'normal') {
+    // 同程度の長さを優先: 同セッション → 過去 → 変形（長さ維持） → 残り
+    order = [].concat(BU.shuffle(nearLen(session)), BU.shuffle(nearLen(past)), nearLen(mutations),
+      BU.shuffle(session), BU.shuffle(past), mutations, BU.shuffle(nearLen(fallback)), BU.shuffle(fallback));
+  } else {
+    // やさしい: 長さ・種類が明らかに違うもの（類似度の低い順）。変形は最後
+    order = [].concat(bySim(session, false), bySim(past, false), bySim(fallback, false), mutations);
+  }
+  for (const t of order) if (add(t)) break;
+  // 万一足りなければ正解に印を付けたダミー（通常は到達しない）
+  let k = 1;
+  while (out.length < 3) { if (!add(correct + '（' + (k++) + '）') && k > 10) break; }
+  return out.slice(0, 3);
+}
+
+/* ---------------------------------------------------------------------
+ * ストレージ層（IndexedDB → 使えなければメモリ）
+ * ------------------------------------------------------------------- */
+const DB_NAME = 'markerQuizDB', DB_VERSION = 1;
+class Storage {
+  constructor() { this.db = null; this.mem = null; this.ready = this._open(); }
+  _open() {
+    return new Promise(resolve => {
+      let done = false;
+      const fallback = () => { if (done) return; done = true; this.mem = { sessions: new Map(), quizzes: new Map(), settings: new Map() }; resolve(false); };
+      try {
+        if (!window.indexedDB) return fallback();
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains('sessions')) db.createObjectStore('sessions', { keyPath: 'id' }).createIndex('updatedAt', 'updatedAt');
+          if (!db.objectStoreNames.contains('quizzes')) db.createObjectStore('quizzes', { keyPath: 'id' }).createIndex('sessionId', 'sessionId');
+          if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', { keyPath: 'key' });
+        };
+        req.onsuccess = () => { if (done) return; done = true; this.db = req.result; this.db.onversionchange = () => this.db.close(); resolve(true); };
+        req.onerror = () => fallback();
+        req.onblocked = () => fallback();
+        setTimeout(fallback, 4000);
+      } catch (e) { fallback(); }
+    });
+  }
+  get persistent() { return !!this.db; }
+  _tx(store, mode, fn) {
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction(store, mode);
+      const st = tx.objectStore(store);
+      let result;
+      try { result = fn(st); } catch (e) { reject(e); return; }
+      tx.oncomplete = () => resolve(result && 'result' in result ? result.result : result);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('aborted'));
+    });
+  }
+  async put(store, obj) {
+    await this.ready;
+    if (this.mem) { this.mem[store].set(obj.id || obj.key, obj); return obj; }
+    await this._tx(store, 'readwrite', st => st.put(obj));
+    return obj;
+  }
+  async get(store, key) {
+    await this.ready;
+    if (this.mem) return this.mem[store].get(key) || null;
+    const r = await this._tx(store, 'readonly', st => st.get(key));
+    return r || null;
+  }
+  async getAll(store) {
+    await this.ready;
+    if (this.mem) return Array.from(this.mem[store].values());
+    return (await this._tx(store, 'readonly', st => st.getAll())) || [];
+  }
+  async del(store, key) {
+    await this.ready;
+    if (this.mem) { this.mem[store].delete(key); return; }
+    await this._tx(store, 'readwrite', st => st.delete(key));
+  }
+}
+
+/* ---------------------------------------------------------------------
+ * LocalBackend 本体
+ * ------------------------------------------------------------------- */
+class LocalBackend {
+  constructor() {
+    this.store = new Storage();
+    this._imgCache = new Map();   // sessionId -> ImageBitmap/HTMLImageElement（画像解析用）
+    this._analysis = document.createElement('canvas');
+    this._analysis.width = 16; this._analysis.height = 16;
+  }
+  async init() { await this.store.ready; return { persistent: this.store.persistent }; }
+
+  /* ---- セッション ---- */
+  async createSession(imageBlob, meta) {
+    meta = meta || {};
+    const buf = await LocalBackend.blobToBuffer(imageBlob);
+    const thumbBuf = meta.thumbBlob ? await LocalBackend.blobToBuffer(meta.thumbBlob) : null;
+    const now = Date.now();
+    const session = {
+      id: BU.uid(), createdAt: now, updatedAt: now,
+      title: meta.title || ('写真 ' + new Date(now).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })),
+      imageBuf: buf, imageType: imageBlob.type || 'image/jpeg', imageW: meta.width, imageH: meta.height,
+      thumbBuf: thumbBuf, thumbType: meta.thumbBlob ? (meta.thumbBlob.type || 'image/jpeg') : null,
+      source: meta.source || { type: 'photo' },   // 由来: {type:'photo'} / {type:'pdf', file, page, pages} など（表示用メタ情報）
+      strokes: [], regions: []
+    };
+    await this.store.put('sessions', session);
+    return session;
+  }
+  async getSession(id) { return this.store.get('sessions', id); }
+  async saveMarks(sessionId, strokes) {
+    const s = await this._require(sessionId);
+    s.strokes = strokes.map(st => ({ id: st.id, tool: st.tool, color: st.color, width: st.width, points: st.points.map(p => ({ x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 })) }));
+    s.regions = detectRegionsFromStrokes(s.strokes, s.imageW, s.imageH, s.regions);
+    s.updatedAt = Date.now();
+    await this.store.put('sessions', s);
+    return s.regions.map(r => Object.assign({}, r));
+  }
+  async detectRegions(sessionId) {
+    const s = await this._require(sessionId);
+    s.regions = detectRegionsFromStrokes(s.strokes, s.imageW, s.imageH, s.regions);
+    await this.store.put('sessions', s);
+    return s.regions.map(r => Object.assign({}, r));
+  }
+  async saveTerms(sessionId, terms) {
+    const s = await this._require(sessionId);
+    for (const r of s.regions) if (Object.prototype.hasOwnProperty.call(terms, r.id)) r.term = String(terms[r.id] || '').trim();
+    s.updatedAt = Date.now();
+    await this.store.put('sessions', s);
+    return s.regions.map(r => Object.assign({}, r));
+  }
+  async deleteSession(id) {
+    const quizzes = await this.store.getAll('quizzes');
+    for (const q of quizzes) if (q.sessionId === id) await this.store.del('quizzes', q.id);
+    await this.store.del('sessions', id);
+    this._imgCache.delete(id);
+  }
+  async deleteQuiz(id) { await this.store.del('quizzes', id); }
+
+  /* ---- クイズ生成 ---- */
+  async generateQuiz(sessionId, opts) {
+    opts = opts || {};
+    const session = await this._require(sessionId);
+    const difficulty = DIFFICULTY_POLICY[opts.difficulty] ? opts.difficulty : 'normal';
+    const policy = DIFFICULTY_POLICY[difficulty];
+    const mode = ['auto', 'image', 'text'].includes(opts.mode) ? opts.mode : 'auto';
+    const regions = session.regions || [];
+    const hasTerm = r => (r.term || '').trim().length > 0;
+    if (regions.length < 2) throw LocalBackend.error('not-enough-regions', '2か所以上マークしてください');
+    let targets = opts.regionIds ? regions.filter(r => opts.regionIds.includes(r.id)) : regions.slice();
+    if (mode === 'text') targets = targets.filter(hasTerm);
+    if (!targets.length) throw LocalBackend.error('no-terms', '文字で出題するには語句の入力が必要です');
+    targets = BU.shuffle(targets);
+    const wanted = opts.count === 'all' || !opts.count ? 10 : parseInt(opts.count, 10) || 10;
+    targets = targets.slice(0, Math.min(targets.length, wanted));
+
+    const img = await this._getImage(session);
+    const allTerms = regions.filter(hasTerm).map(r => r.term.trim());
+    const pastTerms = await this._collectPastTerms(sessionId);
+    const questions = [];
+    let cursor = 0;
+    for (const target of targets) {
+      let type;
+      if (mode === 'image') type = 'B';
+      else if (mode === 'text') type = 'A';
+      else if (!hasTerm(target)) type = 'B';
+      else if (policy.mixTypes) type = ['A', 'C', 'B'][cursor++ % 3];
+      else type = 'A';
+      questions.push(await this._buildQuestion(session, img, target, type, policy, { allTerms, pastTerms }));
+    }
+    const quiz = {
+      id: BU.uid(), sessionId, createdAt: Date.now(), startedAt: Date.now(), finishedAt: null,
+      difficulty, mode, total: questions.length, questions, answers: [], status: 'active',
+      correct: 0, points: 0, elapsedMs: 0
+    };
+    await this.store.put('quizzes', quiz);
+    return quiz;
+  }
+
+  async _buildQuestion(session, img, target, type, policy, pools) {
+    const W = session.imageW, H = session.imageH;
+    const regions = session.regions;
+    const others = regions.filter(r => r.id !== target.id);
+    const padX = W * 0.006, padY = H * 0.004;
+    const maskRect = r => BU.roundRect(BU.clampRect({ x: r.x - padX, y: r.y - padY, w: r.w + 2 * padX, h: r.h + 2 * padY }, W, H));
+    const tRect = { x: target.x, y: target.y, w: target.w, h: target.h };
+    // 周辺表示（コンテキスト）
+    const cw = BU.clamp(Math.max(target.w * policy.contextFactor, W * policy.minContextW), 1, W);
+    const ch = BU.clamp(Math.max(target.h * policy.contextFactor, H * policy.minContextH), 1, H);
+    let context = BU.roundRect({
+      x: BU.clamp(target.x + target.w / 2 - cw / 2, 0, W - cw),
+      y: BU.clamp(target.y + target.h / 2 - ch / 2, 0, H - ch), w: cw, h: ch
+    });
+    const q = {
+      id: BU.uid(), type, targetRegionId: target.id, term: (target.term || '').trim(), targetRect: tRect,
+      context, masks: [], showHighlights: policy.showOtherHighlights, timeLimitMs: policy.timeLimitMs,
+      immediateFeedback: policy.immediateFeedback, hint: null, choices: [], correctIndex: 0, prompt: ''
+    };
+    if (type === 'A' || type === 'B') {
+      q.masks.push(Object.assign(maskRect(target), { isTarget: true, label: '?' }));
+      if (policy.maskAll) for (const o of others) if (BU.rectsIntersect(o, context)) q.masks.push(Object.assign(maskRect(o), { isTarget: false, label: '' }));
+    }
+    if (type === 'A') {
+      const distractors = buildTextDistractors(q.term, policy.key, { sameSession: pools.allTerms, past: pools.pastTerms });
+      const mixed = BU.shuffle([{ text: q.term, correct: true }].concat(distractors.map(t => ({ text: t, correct: false }))));
+      q.choices = mixed.map(c => ({ kind: 'text', text: c.text }));
+      q.correctIndex = mixed.findIndex(c => c.correct);
+      q.prompt = '隠れている語句はどれ？';
+      if (policy.hint) { const cs = BU.chars(q.term); q.hint = { kind: 'text', text: 'ヒント: ' + cs.length + '文字。最初の文字は「' + cs[0] + '」' }; }
+    } else if (type === 'B') {
+      let otherRects = BU.shuffle(others.map(o => ({ x: o.x, y: o.y, w: o.w, h: o.h, regionId: o.id })));
+      const sizeDiff = r => Math.abs(r.w - target.w) / Math.max(target.w, 1) + Math.abs(r.h - target.h) / Math.max(target.h, 1);
+      if (policy.key === 'hard') otherRects.sort((a, b) => sizeDiff(a) - sizeDiff(b));        // 最も紛らわしい（同サイズ）
+      else if (policy.key === 'easy') otherRects.sort((a, b) => sizeDiff(b) - sizeDiff(a));   // 明らかに違う（サイズ差大）
+      const crops = otherRects.slice(0, 3);
+      if (crops.length < 3) {
+        const rnd = await this._pickRandomCrops(img, W, H, 3 - crops.length, tRect, regions);
+        for (const r of rnd) crops.push(Object.assign({ regionId: null, random: true }, r));
+      }
+      const mixed = BU.shuffle([{ rect: tRect, regionId: target.id, correct: true }].concat(crops.map(c => ({ rect: { x: c.x, y: c.y, w: c.w, h: c.h }, regionId: c.regionId || null, correct: false }))));
+      q.choices = mixed.map(c => ({ kind: 'crop', rect: c.rect, regionId: c.regionId }));
+      q.correctIndex = mixed.findIndex(c => c.correct);
+      q.prompt = '隠れている部分はどれ？';
+      if (policy.hint) { const wrong = q.choices.map((c, i) => i).filter(i => i !== q.correctIndex); q.hint = { kind: 'eliminate', index: BU.pick(wrong), text: 'ヒント: 選択肢を1つ消しました' }; }
+    } else if (type === 'C') {
+      // 逆引き: 語句を提示し、写真上の A〜D の隠し箇所から選ぶ
+      let spotRects = BU.shuffle(others).slice(0, 3).map(o => ({ x: o.x, y: o.y, w: o.w, h: o.h, regionId: o.id }));
+      if (spotRects.length < 3) {
+        const rnd = await this._pickRandomCrops(img, W, H, 3 - spotRects.length, tRect, regions);
+        for (const r of rnd) spotRects.push(Object.assign({ regionId: null }, r));
+      }
+      const spots = BU.shuffle([{ rect: tRect, regionId: target.id, correct: true }].concat(spotRects.map(r => ({ rect: { x: r.x, y: r.y, w: r.w, h: r.h }, regionId: r.regionId, correct: false }))));
+      const labels = ['A', 'B', 'C', 'D'];
+      q.masks = spots.map((s, i) => Object.assign(maskRect(s.rect), { isTarget: s.correct, label: labels[i] }));
+      const spotRegionIds = new Set(spots.map(s => s.regionId).filter(Boolean));
+      for (const o of others) if (!spotRegionIds.has(o.id)) q.masks.push(Object.assign(maskRect(o), { isTarget: false, label: '' }));
+      q.choices = spots.map((s, i) => ({ kind: 'spot', label: labels[i], rect: s.rect }));
+      q.correctIndex = spots.findIndex(s => s.correct);
+      let u = null;
+      for (const m of q.masks.slice(0, 4)) u = u ? BU.rectUnion(u, m) : { x: m.x, y: m.y, w: m.w, h: m.h };
+      const mx = W * 0.06, my = H * 0.04;
+      u = { x: u.x - mx, y: u.y - my, w: u.w + 2 * mx, h: u.h + 2 * my };
+      if (u.w > W * 0.5) { u.x = 0; u.w = W; }                       // 広く散っていれば全幅を見せる
+      else if (u.w < W * 0.5) { u.x -= (W * 0.5 - u.w) / 2; u.w = W * 0.5; }
+      if (u.h < H * 0.12) { u.y -= (H * 0.12 - u.h) / 2; u.h = H * 0.12; }
+      q.context = BU.roundRect(BU.clampRect(u, W, H));
+      q.prompt = '「' + q.term + '」はどこ？';
+    }
+    return q;
+  }
+
+  /** 写真の未マーク部分から、対象と同サイズのランダム切り抜きを選ぶ（空白は除外） */
+  async _pickRandomCrops(img, W, H, count, target, regions) {
+    const avoid = regions.map(r => ({ x: r.x, y: r.y, w: r.w, h: r.h }));
+    const results = [];
+    const w = Math.min(target.w, W), h = Math.min(target.h, H);
+    let best = null;
+    const tryPick = (threshold, tries, ignoreVariance) => {
+      for (let t = 0; t < tries && results.length < count; t++) {
+        const r = { x: Math.round(Math.random() * (W - w)), y: Math.round(Math.random() * (H - h)), w: Math.round(w), h: Math.round(h) };
+        if (avoid.some(a => BU.rectsIntersect(r, a, W * 0.01))) continue;
+        if (results.some(a => BU.rectsIntersect(r, a, 0))) continue;
+        if (ignoreVariance) { results.push(r); continue; }
+        const v = this._cropStdDev(img, r);
+        if (v >= threshold) results.push(r);
+        else if (!best || v > best.v) best = { v, r };
+      }
+    };
+    tryPick(18, 40, false);
+    if (results.length < count) tryPick(8, 30, false);
+    if (results.length < count && best && !results.some(a => BU.rectsIntersect(best.r, a, 0))) results.push(best.r);
+    if (results.length < count) tryPick(0, 30, true);
+    // それでも足りなければ位置をずらした切り抜きで埋める（極小画像などの保険）
+    let k = 1;
+    while (results.length < count && k < 10) {
+      const r = BU.clampRect({ x: (target.x + k * w * 1.2) % Math.max(1, W - w), y: (target.y + k * h * 1.7) % Math.max(1, H - h), w, h }, W, H);
+      results.push(BU.roundRect(r)); k++;
+    }
+    return results;
+  }
+  _cropStdDev(img, r) {
+    try {
+      const ctx = this._analysis.getContext('2d', { willReadFrequently: true });
+      ctx.clearRect(0, 0, 16, 16);
+      ctx.drawImage(img, r.x, r.y, r.w, r.h, 0, 0, 16, 16);
+      const d = ctx.getImageData(0, 0, 16, 16).data;
+      let sum = 0, sq = 0; const n = 256;
+      for (let i = 0; i < d.length; i += 4) { const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; sum += g; sq += g * g; }
+      const mean = sum / n;
+      return Math.sqrt(Math.max(0, sq / n - mean * mean));
+    } catch (e) { return 999; }
+  }
+
+  /* ---- 回答・採点 ---- */
+  async submitAnswer(quizId, index, choice, elapsedMs) {
+    const quiz = await this.store.get('quizzes', quizId);
+    if (!quiz) throw LocalBackend.error('not-found', 'クイズが見つかりません');
+    const q = quiz.questions[index];
+    if (!q) throw LocalBackend.error('bad-index', '問題番号が不正です');
+    const policy = DIFFICULTY_POLICY[quiz.difficulty];
+    const timedOut = choice < 0 || choice === null || choice === undefined;
+    const correct = !timedOut && choice === q.correctIndex;
+    let points = 0;
+    if (correct) {
+      points = 100;
+      if (policy.speedBonus && q.timeLimitMs) points += Math.round(50 * BU.clamp(1 - elapsedMs / q.timeLimitMs, 0, 1));
+    }
+    quiz.answers[index] = { index, choice: timedOut ? -1 : choice, correct, timedOut, elapsedMs: Math.max(0, Math.round(elapsedMs || 0)), points };
+    await this.store.put('quizzes', quiz);
+    return { correct, timedOut, correctIndex: q.correctIndex, points, correctChoice: q.choices[q.correctIndex] };
+  }
+  async finishQuiz(quizId) {
+    const quiz = await this.store.get('quizzes', quizId);
+    if (!quiz) throw LocalBackend.error('not-found', 'クイズが見つかりません');
+    const answers = quiz.questions.map((q, i) => quiz.answers[i] || { index: i, choice: -1, correct: false, timedOut: true, elapsedMs: 0, points: 0 });
+    quiz.answers = answers;
+    quiz.correct = answers.filter(a => a.correct).length;
+    quiz.points = answers.reduce((s, a) => s + a.points, 0);
+    quiz.elapsedMs = answers.reduce((s, a) => s + a.elapsedMs, 0);
+    quiz.finishedAt = Date.now();
+    quiz.status = 'finished';
+    await this.store.put('quizzes', quiz);
+    const session = await this.store.get('sessions', quiz.sessionId);
+    if (session) { session.updatedAt = Date.now(); await this.store.put('sessions', session); }
+    return {
+      quiz, correct: quiz.correct, total: quiz.total, points: quiz.points, elapsedMs: quiz.elapsedMs,
+      wrongRegionIds: quiz.questions.filter((q, i) => !answers[i].correct).map(q => q.targetRegionId)
+    };
+  }
+
+  /* ---- 履歴 ---- */
+  async listHistory() {
+    const sessions = (await this.store.getAll('sessions')).sort((a, b) => b.updatedAt - a.updatedAt);
+    const quizzes = await this.store.getAll('quizzes');
+    return sessions.map(s => ({
+      id: s.id, title: s.title, createdAt: s.createdAt, updatedAt: s.updatedAt, source: s.source || null,
+      regionCount: (s.regions || []).length, termCount: (s.regions || []).filter(r => (r.term || '').trim()).length,
+      thumbBlob: s.thumbBuf ? new Blob([s.thumbBuf], { type: s.thumbType || 'image/jpeg' }) : null,
+      attempts: quizzes.filter(q => q.sessionId === s.id && q.status === 'finished').sort((a, b) => b.finishedAt - a.finishedAt)
+        .map(q => ({ id: q.id, difficulty: q.difficulty, correct: q.correct, total: q.total, points: q.points, elapsedMs: q.elapsedMs, finishedAt: q.finishedAt }))
+    }));
+  }
+  async listQuizzes(sessionId) { return (await this.store.getAll('quizzes')).filter(q => q.sessionId === sessionId); }
+
+  /* ---- エクスポート / インポート ---- */
+  async exportSession(id) {
+    const s = await this._require(id);
+    const quizzes = (await this.store.getAll('quizzes')).filter(q => q.sessionId === id && q.status === 'finished');
+    return JSON.stringify({
+      app: 'marker-quiz', formatVersion: 1, exportedAt: new Date().toISOString(),
+      session: {
+        id: s.id, title: s.title, createdAt: s.createdAt, updatedAt: s.updatedAt, imageW: s.imageW, imageH: s.imageH,
+        imageType: s.imageType, imageBase64: LocalBackend.bufferToBase64(s.imageBuf),
+        thumbType: s.thumbType, thumbBase64: s.thumbBuf ? LocalBackend.bufferToBase64(s.thumbBuf) : null,
+        source: s.source || null,
+        strokes: s.strokes, regions: s.regions
+      },
+      quizzes
+    });
+  }
+  async importSession(json) {
+    const data = typeof json === 'string' ? JSON.parse(json) : json;
+    if (!data || data.app !== 'marker-quiz' || !data.session || !data.session.imageBase64) throw LocalBackend.error('bad-format', 'このアプリの書き出しファイルではありません');
+    const src = data.session;
+    const exists = await this.store.get('sessions', src.id);
+    const newId = exists ? BU.uid() : (src.id || BU.uid());
+    const now = Date.now();
+    const session = {
+      id: newId, createdAt: src.createdAt || now, updatedAt: now, title: (src.title || '読み込んだ写真') + (exists ? '（複製）' : ''),
+      imageBuf: LocalBackend.base64ToBuffer(src.imageBase64), imageType: src.imageType || 'image/jpeg',
+      imageW: src.imageW, imageH: src.imageH,
+      thumbBuf: src.thumbBase64 ? LocalBackend.base64ToBuffer(src.thumbBase64) : null, thumbType: src.thumbType || 'image/jpeg',
+      source: src.source || null,   // 旧形式（v1.0）の書き出しには無い → null
+      strokes: Array.isArray(src.strokes) ? src.strokes : [], regions: Array.isArray(src.regions) ? src.regions : []
+    };
+    if (!session.imageW || !session.imageH) throw LocalBackend.error('bad-format', '画像サイズ情報がありません');
+    session.regions = detectRegionsFromStrokes(session.strokes, session.imageW, session.imageH, session.regions);
+    await this.store.put('sessions', session);
+    for (const q of (data.quizzes || [])) {
+      if (!q || !q.questions) continue;
+      const nq = Object.assign({}, q, { id: BU.uid(), sessionId: newId });
+      await this.store.put('quizzes', nq);
+    }
+    return session;
+  }
+
+  /* ---- 内部ヘルパ ---- */
+  async _require(id) { const s = await this.store.get('sessions', id); if (!s) throw LocalBackend.error('not-found', 'セッションが見つかりません'); return s; }
+  async _collectPastTerms(excludeId) {
+    const sessions = await this.store.getAll('sessions');
+    const set = new Set();
+    for (const s of sessions) { if (s.id === excludeId) continue; for (const r of (s.regions || [])) { const t = (r.term || '').trim(); if (t) set.add(t); } }
+    return Array.from(set);
+  }
+  async _getImage(session) {
+    if (this._imgCache.has(session.id)) return this._imgCache.get(session.id);
+    const blob = new Blob([session.imageBuf], { type: session.imageType || 'image/jpeg' });
+    const img = await LocalBackend.decodeBlob(blob);
+    if (this._imgCache.size > 2) { const first = this._imgCache.keys().next().value; this._imgCache.delete(first); }
+    this._imgCache.set(session.id, img);
+    return img;
+  }
+  static error(code, message) { const e = new Error(message); e.code = code; return e; }
+  static blobToBuffer(blob) {
+    if (blob.arrayBuffer) return blob.arrayBuffer();
+    return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => rej(fr.error); fr.readAsArrayBuffer(blob); });
+  }
+  static bufferToBase64(buf) {
+    const bytes = new Uint8Array(buf); let s = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+  static base64ToBuffer(b64) {
+    const bin = atob(b64); const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes.buffer;
+  }
+  static async decodeBlob(blob) {
+    if (window.createImageBitmap) {
+      try { return await createImageBitmap(blob); } catch (e) { /* fall through */ }
+    }
+    return new Promise((res, rej) => {
+      const url = URL.createObjectURL(blob);
+      const im = new Image();
+      im.onload = () => { URL.revokeObjectURL(url); res(im); };
+      im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('image decode failed')); };
+      im.src = url;
+    });
+  }
+}
+
+/* ---------------------------------------------------------------------
+ * RemoteBackend（サーバー版のひな形・未接続）
+ *  LocalBackend と同じインターフェース。fetch でサーバーの REST API を呼ぶ。
+ *  差し替え方法: 下の createBackend() で USE_REMOTE_BACKEND を true にし、
+ *  REMOTE_BASE_URL を API のベースURLにする。フロントエンドの変更は不要。
+ *  ※ 画像は multipart/form-data で送る想定。サーバー側は同じ JSON 形状
+ *    （session / regions / quiz / answer）を返せば動作する。
+ * ------------------------------------------------------------------- */
+class RemoteBackend {
+  constructor(baseUrl) { this.base = baseUrl.replace(/\/$/, ''); }
+  async init() { return { persistent: true, remote: true }; }
+  async _json(path, opts) {
+    const res = await fetch(this.base + path, Object.assign({ headers: { 'Accept': 'application/json' } }, opts));
+    if (!res.ok) throw LocalBackend.error('http-' + res.status, 'サーバーエラー ' + res.status);
+    return res.json();
+  }
+  async _send(path, method, body) { return this._json(path, { method, headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(body || {}) }); }
+  async createSession(imageBlob, meta) {
+    const fd = new FormData(); fd.append('image', imageBlob, 'photo.jpg'); fd.append('meta', JSON.stringify(meta || {}));
+    if (meta && meta.thumbBlob) fd.append('thumb', meta.thumbBlob, 'thumb.jpg');
+    return this._json('/api/sessions', { method: 'POST', body: fd });
+  }
+  async getSession(id) { return this._json('/api/sessions/' + encodeURIComponent(id)); }
+  async saveMarks(id, strokes) { return this._send('/api/sessions/' + encodeURIComponent(id) + '/marks', 'PUT', { strokes }); }
+  async detectRegions(id) { return this._send('/api/sessions/' + encodeURIComponent(id) + '/regions', 'POST'); }
+  async saveTerms(id, terms) { return this._send('/api/sessions/' + encodeURIComponent(id) + '/terms', 'PUT', { terms }); }
+  async generateQuiz(id, opts) { return this._send('/api/sessions/' + encodeURIComponent(id) + '/quizzes', 'POST', opts); }
+  async submitAnswer(quizId, index, choice, elapsedMs) { return this._send('/api/quizzes/' + encodeURIComponent(quizId) + '/answers', 'POST', { index, choice, elapsedMs }); }
+  async finishQuiz(quizId) { return this._send('/api/quizzes/' + encodeURIComponent(quizId) + '/finish', 'POST'); }
+  async listHistory() { return this._json('/api/history'); }
+  async listQuizzes(sessionId) { return this._json('/api/sessions/' + encodeURIComponent(sessionId) + '/quizzes'); }
+  async deleteSession(id) { return this._json('/api/sessions/' + encodeURIComponent(id), { method: 'DELETE' }); }
+  async deleteQuiz(id) { return this._json('/api/quizzes/' + encodeURIComponent(id), { method: 'DELETE' }); }
+  async exportSession(id) { const r = await fetch(this.base + '/api/sessions/' + encodeURIComponent(id) + '/export'); return r.text(); }
+  async importSession(json) { return this._send('/api/sessions/import', 'POST', typeof json === 'string' ? JSON.parse(json) : json); }
+}
+
+/** バックエンドの生成。ここを切り替えるだけでサーバー版に移行できる。 */
+const USE_REMOTE_BACKEND = false;
+const REMOTE_BASE_URL = 'https://example.invalid';   // 実サーバーのURLに差し替える
+function createBackend() { return USE_REMOTE_BACKEND ? new RemoteBackend(REMOTE_BASE_URL) : new LocalBackend(); }
+</script>
+<script>
+'use strict';
+/* =====================================================================
+ *  ██████  FRONTEND LAYER（表示・操作）  ██████
+ *  画面遷移・キャンバス描画エンジン・状態管理。
+ *  バックエンドは上の API（backend.*）経由でのみ呼び出す。
+ * ===================================================================== */
+
+const backend = createBackend();
+const $ = (sel, root) => (root || document).querySelector(sel);
+const $$ = (sel, root) => Array.from((root || document).querySelectorAll(sel));
+const DPR = () => Math.min(window.devicePixelRatio || 1, 3);
+
+const App = {
+  screen: 'home',
+  prevScreen: 'home',
+  session: null,       // 現在のセッション（backend が返したもの）
+  doc: null,           // { img, W, H, markerLayer, pencilLayer }
+  strokes: [],
+  regions: [],
+  undoStack: [], redoStack: [],
+  settings: { difficulty: 'normal', count: 'all', mode: 'auto' },
+  tool: 'marker', color: '#FFEB3B', widthKey: 'mid', pencilColor: '#333333',
+  highlight: false,
+  quiz: null, qIndex: 0, answered: false, qStart: 0, timer: null, lastSummary: null,
+  persistent: true,
+  objectUrls: []
+};
+
+/* ---------------- 共通UI ---------------- */
+function announce(msg) { const el = $('#live'); el.textContent = ''; setTimeout(() => { el.textContent = msg; }, 40); }
+let toastTimer = null;
+function toast(msg, ms) {
+  const root = $('#toastRoot'); root.innerHTML = '';
+  const el = document.createElement('div'); el.className = 'toast'; el.setAttribute('role', 'status'); el.textContent = msg; root.appendChild(el);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { root.innerHTML = ''; }, ms || 2600);
+}
+function showLoading(text) { $('#loadingText').textContent = text || '読み込み中…'; $('#loading').hidden = false; }
+function hideLoading() { $('#loading').hidden = true; }
+function confirmDialog(opts) {
+  return new Promise(resolve => {
+    const root = $('#modalRoot');
+    const wrap = document.createElement('div'); wrap.className = 'modal'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
+    const card = document.createElement('div'); card.className = 'modal-card';
+    const h = document.createElement('h3'); h.textContent = opts.title || '確認'; card.appendChild(h);
+    if (opts.message) { const p = document.createElement('p'); p.textContent = opts.message; card.appendChild(p); }
+    const acts = document.createElement('div'); acts.className = 'modal-actions';
+    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'btn btn-secondary'; cancel.textContent = opts.cancelText || 'キャンセル';
+    const ok = document.createElement('button'); ok.type = 'button'; ok.className = 'btn ' + (opts.danger ? 'btn-danger' : 'btn-primary'); ok.textContent = opts.okText || 'OK';
+    if (opts.cancelText !== null) acts.appendChild(cancel);
+    acts.appendChild(ok); card.appendChild(acts); wrap.appendChild(card); root.appendChild(wrap);
+    const openedAt = performance.now();
+    const close = v => { root.innerHTML = ''; resolve(v); };
+    cancel.addEventListener('click', () => close(false));
+    ok.addEventListener('click', () => close(true));
+    // 長押し直後に指を離したときの合成 click で閉じないよう、開いてすぐの背景タップは無視
+    wrap.addEventListener('click', e => { if (e.target === wrap && performance.now() - openedAt > 500) close(false); });
+    wrap.addEventListener('keydown', e => { if (e.key === 'Escape') close(false); });
+    setTimeout(() => ok.focus(), 30);
+  });
+}
+/** 1行入力つきダイアログ（confirmDialog と同じ見た目）。OK/Enter で入力文字列、キャンセル/Escape/背景タップで null を返す */
+function promptDialog(opts) {
+  opts = opts || {};
+  return new Promise(resolve => {
+    const root = $('#modalRoot');
+    const wrap = document.createElement('div'); wrap.className = 'modal'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true');
+    const card = document.createElement('div'); card.className = 'modal-card';
+    const h = document.createElement('h3'); h.textContent = opts.title || '入力'; card.appendChild(h);
+    if (opts.message) { const p = document.createElement('p'); p.textContent = opts.message; card.appendChild(p); }
+    const input = document.createElement('input'); input.className = 'modal-input'; input.type = opts.inputType || 'text';
+    input.value = opts.defaultValue || ''; input.autocomplete = opts.inputType === 'password' ? 'current-password' : 'off';
+    input.setAttribute('aria-label', opts.inputLabel || opts.title || '入力');
+    if (opts.placeholder) input.placeholder = opts.placeholder;
+    card.appendChild(input);
+    const acts = document.createElement('div'); acts.className = 'modal-actions';
+    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'btn btn-secondary'; cancel.textContent = opts.cancelText || 'キャンセル';
+    const ok = document.createElement('button'); ok.type = 'button'; ok.className = 'btn btn-primary'; ok.textContent = opts.okText || 'OK';
+    acts.appendChild(cancel); acts.appendChild(ok); card.appendChild(acts); wrap.appendChild(card); root.appendChild(wrap);
+    const openedAt = performance.now();
+    const close = v => { root.innerHTML = ''; resolve(v); };
+    cancel.addEventListener('click', () => close(null));
+    ok.addEventListener('click', () => close(input.value));
+    // 日本語IMEの変換確定の Enter（isComposing / keyCode 229）では閉じない
+    input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); close(input.value); } });
+    wrap.addEventListener('click', e => { if (e.target === wrap && performance.now() - openedAt > 500) close(null); });
+    wrap.addEventListener('keydown', e => { if (e.key === 'Escape') close(null); });
+    setTimeout(() => input.focus(), 30);
+  });
+}
+function vibrate(pattern) { try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* ignore */ } }
+function fmtSec(ms) { return (Math.round(ms / 100) / 10).toFixed(1) + '秒'; }
+function fmtDuration(ms) { const s = Math.round(ms / 1000); return s >= 60 ? Math.floor(s / 60) + '分' + (s % 60) + '秒' : s + '秒'; }
+function fmtDate(ts) { const d = new Date(ts); return d.toLocaleString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+function diffLabel(key) { const p = DIFFICULTY_POLICY[key] || DIFFICULTY_POLICY.normal; return p.label + ' ' + p.stars; }
+function releaseObjectUrls() { for (const u of App.objectUrls) URL.revokeObjectURL(u); App.objectUrls = []; }
+
+/* ---------------- 画面遷移 ---------------- */
+const SCREEN_TITLES = { home: 'マーカーでクイズ', pdf: 'PDFのページを選ぶ', mark: 'マークする', terms: '語句の確認', quiz: 'クイズ', result: '結果', history: '履歴', help: 'ヘルプ' };
+const STEP_OF = { home: 0, pdf: 0, mark: 1, terms: 2, quiz: 3, result: 4 };
+function showScreen(name, opts) {
+  opts = opts || {};
+  if (name !== App.screen) App.prevScreen = App.screen;
+  App.screen = name;
+  $$('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
+  $('#appTitle').textContent = SCREEN_TITLES[name] || 'マーカーでクイズ';
+  const back = $('#btnBack');
+  back.classList.toggle('placeholder', name === 'home');
+  back.disabled = name === 'home';
+  const step = STEP_OF[name];
+  const stepper = $('#stepper');
+  stepper.hidden = step === undefined;
+  if (step !== undefined) $$('#stepper li').forEach((li, i) => { li.classList.toggle('current', i === step); li.classList.toggle('done', i < step); });
+  if (!opts.silentHistory) { try { history.pushState({ screen: name }, ''); } catch (e) { /* ignore */ } }
+  const sc = $('#screen-' + name + ' .scroll'); if (sc) sc.scrollTop = 0;
+  if (name === 'mark') requestAnimationFrame(() => { resizeMarkCanvas(); });
+}
+async function goBack() {
+  switch (App.screen) {
+    case 'pdf': closePdfPicker(); showScreen('home'); refreshHomeState(); break;
+    case 'mark': await flushSave(); showScreen('home'); refreshHomeState(); break;
+    case 'terms': showScreen('mark'); break;
+    case 'quiz': await quitQuiz(); break;
+    case 'result': showScreen('home'); refreshHomeState(); break;
+    case 'history': showScreen('home'); refreshHomeState(); break;
+    case 'help': showScreen(App.prevScreen === 'help' ? 'home' : App.prevScreen); break;
+    default: break;
+  }
+}
+window.addEventListener('popstate', () => { if (App.screen !== 'home') goBack(); });
+
+/* ---------------- 画像の読み込み・縮小 ---------------- */
+const MAX_LONG_EDGE = 1600, THUMB_LONG_EDGE = 240;
+async function decodeFileOriented(file) {
+  if (window.createImageBitmap) {
+    try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); }
+    catch (e) { /* 古い実装: オプション非対応 → <img> にフォールバック */ }
+  }
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const im = new Image();
+    im.onload = () => { URL.revokeObjectURL(url); res(im); };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('画像を読み込めませんでした')); };
+    im.src = url;
+  });
+}
+function imgSize(img) { return { w: img.naturalWidth || img.width, h: img.naturalHeight || img.height }; }
+function canvasToBlob(canvas, type, quality) {
+  return new Promise((res, rej) => {
+    if (canvas.toBlob) canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), type, quality);
+    else { try { const url = canvas.toDataURL(type, quality); const bin = atob(url.split(',')[1]); const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i); res(new Blob([arr], { type })); } catch (e) { rej(e); } }
+  });
+}
+/** 画像を長辺 maxEdge に縮小した JPEG Blob とサイズを返す */
+async function downscaleToJpeg(img, maxEdge, quality) {
+  const { w, h } = imgSize(img);
+  const scale = Math.min(1, maxEdge / Math.max(w, h));
+  const W = Math.max(1, Math.round(w * scale)), H = Math.max(1, Math.round(h * scale));
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(img, 0, 0, W, H);
+  const blob = await canvasToBlob(c, 'image/jpeg', quality);
+  return { blob, width: W, height: H };
+}
+async function importPhoto(file, title) {
+  if (!file) return;
+  if (isPdfFile(file)) { await importPdf(file); return; }   // 「写真を選ぶ」で PDF が選ばれた場合も受け付ける
+  if (!/^image\//.test(file.type) && !/\.(jpe?g|png|gif|webp|heic|heif|bmp)$/i.test(file.name || '')) { toast('画像ファイルを選んでください'); return; }
+  showLoading('写真を読み込んでいます…');
+  try {
+    const img = await decodeFileOriented(file);
+    const main = await downscaleToJpeg(img, MAX_LONG_EDGE, 0.8);
+    const thumb = await downscaleToJpeg(img, THUMB_LONG_EDGE, 0.7);
+    if (img.close) img.close();
+    const session = await backend.createSession(main.blob, { width: main.width, height: main.height, thumbBlob: thumb.blob, title });
+    await openSession(session);
+  } catch (e) {
+    console.error(e);
+    toast('写真を読み込めませんでした: ' + (e.message || e));
+  } finally { hideLoading(); }
+}
+/** セッションを開いてマーク画面へ */
+async function openSession(session, opts) {
+  opts = opts || {};
+  showLoading('準備しています…');
+  try {
+    App.session = session;
+    const blob = new Blob([session.imageBuf], { type: session.imageType || 'image/jpeg' });
+    const img = await LocalBackend.decodeBlob(blob);
+    App.doc = createImageDoc(img, session.imageW, session.imageH);
+    App.strokes = (session.strokes || []).map(s => ({ id: s.id, tool: s.tool, color: s.color, width: s.width, points: s.points.slice() }));
+    App.regions = (session.regions || []).slice();
+    App.undoStack = []; App.redoStack = []; App.highlight = false;
+    $('#btnHighlight').setAttribute('aria-pressed', 'false');
+    rebuildLayers();
+    showScreen('mark');
+    fitView();
+    updateMarkUI();
+    showStageHint(App.strokes.length ? '2本指でズーム/移動' : '覚えたい語句を指でなぞってください');
+    if (opts.afterOpen) await opts.afterOpen();
+  } finally { hideLoading(); }
+}
+
+/* ---------------- PDF の読み込み（pdf.js を初回のみ取得） ---------------- */
+/*
+ * PDF は各ページを画像（長辺 MAX_LONG_EDGE px）に変換し、通常の「写真」セッションとして保存する。
+ * 変換には Mozilla pdf.js（Apache-2.0）を使うが、このHTMLには同梱せず、ユーザーが初めて PDF を
+ * 選んだときにだけ読み込む（遅延ロード）。取得元は次の順に試し、最初に成功したものを使う:
+ *   1. local    … このHTMLと同じフォルダー（pdf.min.js / pdf.worker.min.js / cmaps/ / standard_fonts/）→ 完全オフライン用
+ *   2. jsdelivr … cdn.jsdelivr.net の pdfjs-dist@3.11.174（legacy/build）
+ *   3. cdnjs    … cdnjs.cloudflare.com の pdf.js 3.11.174
+ *   4. unpkg    … unpkg.com の pdfjs-dist@3.11.174（legacy/build）
+ * 3.11.174 は classic <script> で window.pdfjsLib を公開する最後の UMD 系列（4.x は ES Module のみ）。
+ * ワーカーは fetch → Blob URL で同一オリジン化して本物の Worker を動かし、できなければ URL を直接指定して
+ * pdf.js 側のフォールバック（メインスレッドで動く "fake worker"）に任せる。
+ * 日本語フォントが埋め込まれていない PDF のため、取得元ごとの cMapUrl / standardFontDataUrl を getDocument に毎回渡す。
+ */
+const PDFJS_VERSION = '3.11.174';
+const PDFJS_SOURCES = [
+  { key: 'local', base: null, lib: 'pdf.min.js', worker: 'pdf.worker.min.js', cmaps: 'cmaps/', fonts: 'standard_fonts/', timeoutMs: 8000 },
+  { key: 'jsdelivr', base: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/', lib: 'legacy/build/pdf.min.js', worker: 'legacy/build/pdf.worker.min.js', cmaps: 'cmaps/', fonts: 'standard_fonts/', timeoutMs: 25000 },
+  { key: 'cdnjs', base: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/', lib: 'pdf.min.js', worker: 'pdf.worker.min.js', cmaps: 'cmaps/', fonts: 'standard_fonts/', timeoutMs: 25000 },
+  { key: 'unpkg', base: 'https://unpkg.com/pdfjs-dist@3.11.174/', lib: 'legacy/build/pdf.min.js', worker: 'legacy/build/pdf.worker.min.js', cmaps: 'cmaps/', fonts: 'standard_fonts/', timeoutMs: 25000 }
+];
+/** PDF ページ選択画面の状態 */
+const Pdf = { task: null, doc: null, name: '', pageCount: 0, selected: new Set(), observer: null, queue: [], active: 0, generation: 0 };
+let pdfjsReady = null;   // Promise<{lib, docOptions, source}>。成功したら使い回し、全滅したら破棄して再試行できるようにする
+
+function isPdfFile(file) { return !!file && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '')); }
+
+/** 取得元の相対パスを絶対URLに解決する（local はこのHTMLの場所が基準）。解決できない環境（about:srcdoc 等）では null */
+function pdfjsSourceUrls(src) {
+  try {
+    const base = src.base || document.baseURI;
+    const abs = p => new URL(p, base).href;
+    return { lib: abs(src.lib), worker: abs(src.worker), cmaps: abs(src.cmaps), fonts: abs(src.fonts) };
+  } catch (e) { return null; }
+}
+/** <script src> を差し込んで読み込む。error / タイムアウト時はタグを外して reject */
+function loadScriptTag(url, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    let settled = false, timer = null;
+    const finish = (ok, err) => {
+      if (settled) return; settled = true;
+      clearTimeout(timer);
+      if (ok) resolve(s); else { s.remove(); reject(err); }
+    };
+    timer = setTimeout(() => finish(false, new Error('タイムアウト: ' + url)), timeoutMs);
+    s.addEventListener('load', () => finish(true));
+    s.addEventListener('error', () => finish(false, new Error('読み込み失敗: ' + url)));
+    s.async = true; s.src = url;
+    document.head.appendChild(s);
+  });
+}
+async function loadPdfjsLib(url, timeoutMs) {
+  const tag = await loadScriptTag(url, timeoutMs);
+  const lib = window.pdfjsLib;   // UMD ビルドが公開するグローバル
+  if (!lib || typeof lib.getDocument !== 'function' || !lib.GlobalWorkerOptions) { tag.remove(); throw new Error('pdfjsLib が見つかりません: ' + url); }
+  return lib;
+}
+/** ワーカーの設定。fetch → Blob URL で同一オリジン化すればクロスオリジンでも本物の Worker が動く。失敗時は URL を直接指定（pdf.js が fake worker に自動フォールバック） */
+async function setupPdfjsWorker(lib, workerUrl) {
+  try {
+    const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, 20000);
+    let code;
+    try {
+      const res = await fetch(workerUrl, ctrl ? { signal: ctrl.signal } : undefined);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      code = await res.text();
+    } finally { clearTimeout(timer); }
+    if (!code || /^\s*</.test(code.slice(0, 200))) throw new Error('ワーカーの内容が不正です');   // HTML が返ってきた等
+    lib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+  } catch (e) {
+    console.warn('[pdf.js] worker を直接取得できなかったため URL をそのまま指定します:', e && e.message ? e.message : e);
+    lib.GlobalWorkerOptions.workerSrc = workerUrl;
+  }
+}
+/** pdf.js を（未取得なら）取得して { lib, docOptions, source } を返す。onProgress(text) で進行状況を表示 */
+function ensurePdfJs(onProgress) {
+  if (pdfjsReady) return pdfjsReady;
+  pdfjsReady = (async () => {
+    if (onProgress) onProgress('PDFの表示部品をダウンロードしています…（初回のみ）');
+    let lastErr = null;
+    for (const src of PDFJS_SOURCES) {
+      const urls = pdfjsSourceUrls(src);
+      if (!urls) continue;
+      try {
+        const lib = await loadPdfjsLib(urls.lib, src.timeoutMs || 25000);
+        await setupPdfjsWorker(lib, urls.worker);
+        console.info('[pdf.js] ' + PDFJS_VERSION + ' を ' + src.key + ' から読み込みました');
+        return { lib, source: src.key, docOptions: { cMapUrl: urls.cmaps, cMapPacked: true, standardFontDataUrl: urls.fonts } };
+      } catch (e) {
+        lastErr = e;
+        console.warn('[pdf.js] ' + src.key + ' から取得できませんでした:', e && e.message ? e.message : e);
+      }
+    }
+    throw lastErr || new Error('pdf.js を取得できませんでした');
+  })();
+  pdfjsReady.catch(() => { pdfjsReady = null; });   // 全滅 → 次回また最初から試せる
+  return pdfjsReady;
+}
+
+/** PDF ファイルを開き、1ページなら即取り込み、複数ページならページ選択画面へ */
+async function importPdf(file) {
+  if (!file) return;
+  if (!isPdfFile(file)) { toast('PDFファイルを選んでください'); return; }
+  let pdfjs;
+  try { pdfjs = await ensurePdfJs(showLoading); }
+  catch (e) {
+    console.warn(e); hideLoading();
+    await confirmDialog({
+      title: 'PDFを読み込めません', cancelText: null, okText: 'OK',
+      message: 'PDFの表示部品（pdf.js）を取得できませんでした。PDF機能は初回だけインターネット接続が必要です。\n\nオフラインでも使うには、このHTMLと同じフォルダーに pdf.min.js と pdf.worker.min.js を置いてください（ヘルプ参照）。'
+    });
+    return;
+  }
+  const lib = pdfjs.lib;
+  showLoading('PDFを開いています…');
+  closePdfPicker();
+  let task = null, cancelled = false;
+  try {
+    const data = new Uint8Array(await LocalBackend.blobToBuffer(file));
+    task = lib.getDocument(Object.assign({ data }, pdfjs.docOptions));
+    Pdf.task = task;
+    let onCancel = null;
+    const cancelP = new Promise(res => { onCancel = () => { cancelled = true; res(null); }; });
+    // パスワード付きPDF: ローディング（z-index が高い）を一時的に隠して入力ダイアログを出す
+    task.onPassword = async (update, reason) => {
+      hideLoading();
+      const pw = await promptDialog({
+        title: 'パスワード付きPDF',
+        message: reason === lib.PasswordResponses.INCORRECT_PASSWORD ? 'パスワードが違います。もう一度入力してください。' : 'このPDFはパスワードで保護されています。',
+        okText: '開く', inputType: 'password'
+      });
+      if (pw === null) {
+        onCancel();
+        task.promise.catch(() => { /* destroy による reject は無視 */ });
+        try { const p = task.destroy(); if (p && p.catch) p.catch(() => { /* ignore */ }); } catch (e) { /* ignore */ }
+        return;
+      }
+      showLoading('PDFを開いています…');
+      update(pw);
+    };
+    const doc = await Promise.race([task.promise, cancelP]);
+    if (!doc || cancelled || Pdf.task !== task) { closePdfPicker(); return; }   // キャンセル、または別の操作で閉じられた
+    Pdf.doc = doc;
+    Pdf.name = String(file.name || 'PDF').replace(/\.pdf$/i, '') || 'PDF';
+    Pdf.pageCount = doc.numPages;
+    $('#pdfName').textContent = Pdf.name;
+    $('#pdfPages').textContent = '全 ' + Pdf.pageCount + ' ページ';
+    if (doc.numPages === 1) { await importPdfPages([1]); return; }   // 1ページだけなら選択画面を飛ばす
+    showScreen('pdf');
+    buildPdfGrid();
+  } catch (e) {
+    if (cancelled) return;
+    console.error(e);
+    const name = e && e.name;
+    if (name === 'PasswordException') toast('パスワードが確認できなかったため開けませんでした');
+    else if (name === 'InvalidPDFException') toast('PDFファイルが壊れているか、対応していない形式です');
+    else toast('PDFを開けませんでした: ' + ((e && e.message) || e));
+    closePdfPicker();
+  } finally { hideLoading(); }
+}
+/** ページ選択グリッドを作る。サムネイルは見えているものから順に（最大2並列で）描く */
+function buildPdfGrid() {
+  const grid = $('#pdfGrid'); grid.innerHTML = '';
+  Pdf.selected.clear(); Pdf.queue = []; Pdf.active = 0;
+  if (Pdf.observer) { Pdf.observer.disconnect(); Pdf.observer = null; }
+  const gen = Pdf.generation;
+  const frag = document.createDocumentFragment();
+  for (let n = 1; n <= Pdf.pageCount; n++) {
+    const tile = document.createElement('button'); tile.type = 'button'; tile.className = 'pdf-page';
+    tile.setAttribute('role', 'option'); tile.setAttribute('aria-selected', 'false'); tile.setAttribute('aria-label', n + 'ページ目'); tile.dataset.page = String(n);
+    const th = document.createElement('span'); th.className = 'pdf-thumb';   // button 内なので phrasing content の span を使う
+    const ld = document.createElement('span'); ld.className = 'pdf-loading'; ld.textContent = '…'; th.appendChild(ld);
+    const num = document.createElement('span'); num.className = 'pdf-num'; num.textContent = 'p.' + n;
+    const chk = document.createElement('span'); chk.className = 'pdf-check'; chk.setAttribute('aria-hidden', 'true'); chk.innerHTML = '<svg class="ic"><use href="#i-check"></use></svg>';
+    tile.appendChild(th); tile.appendChild(num); tile.appendChild(chk);
+    tile.addEventListener('click', () => togglePdfPage(n, tile));
+    frag.appendChild(tile);
+  }
+  grid.appendChild(frag);
+  const tiles = $$('.pdf-page', grid);
+  if ('IntersectionObserver' in window) {
+    Pdf.observer = new IntersectionObserver(entries => {
+      for (const en of entries) {
+        if (!en.isIntersecting) continue;
+        if (Pdf.observer) Pdf.observer.unobserve(en.target);
+        enqueuePdfThumb(Number(en.target.dataset.page), en.target, gen);
+      }
+    }, { root: $('#screen-pdf .scroll'), rootMargin: '200px 0px' });
+    tiles.forEach(t => Pdf.observer.observe(t));
+  } else {
+    tiles.forEach(t => enqueuePdfThumb(Number(t.dataset.page), t, gen));
+  }
+  updatePdfUI();
+}
+function enqueuePdfThumb(n, tile, gen) { Pdf.queue.push({ n, tile, gen }); pumpPdfQueue(); }
+function pumpPdfQueue() {
+  while (Pdf.active < 2 && Pdf.queue.length) {
+    const job = Pdf.queue.shift();
+    if (job.gen !== Pdf.generation) continue;   // 閉じた/別のPDFに切り替わった後の古い仕事は捨てる
+    Pdf.active++;
+    renderPdfPage(job.n, THUMB_LONG_EDGE).then(canvas => {
+      if (job.gen !== Pdf.generation) return;
+      const th = $('.pdf-thumb', job.tile); if (th) { th.innerHTML = ''; th.appendChild(canvas); }
+    }).catch(e => {
+      if (job.gen !== Pdf.generation) return;
+      console.warn('サムネイル描画に失敗 p.' + job.n, e);
+      const th = $('.pdf-thumb', job.tile);
+      if (th) { th.innerHTML = ''; const s = document.createElement('span'); s.className = 'pdf-loading'; s.textContent = '表示できません'; th.appendChild(s); }
+    }).then(() => {
+      if (job.gen === Pdf.generation) { Pdf.active--; pumpPdfQueue(); }
+    });
+  }
+}
+/** ページを長辺 longEdge px のキャンバスに描く（ページ自身の /Rotate を反映） */
+async function renderPdfPage(pageNum, longEdge) {
+  const doc = Pdf.doc; if (!doc) throw new Error('PDFが開かれていません');
+  const page = await doc.getPage(pageNum);
+  try {
+    const vp1 = page.getViewport({ scale: 1 });
+    const scale = longEdge / Math.max(vp1.width, vp1.height);
+    const vp = page.getViewport({ scale });
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(vp.width)); c.height = Math.max(1, Math.round(vp.height));
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);   // 透明部分は白紙に
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    return c;
+  } finally { try { page.cleanup(); } catch (e) { /* ignore */ } }
+}
+function togglePdfPage(n, tile) {
+  if (Pdf.selected.has(n)) Pdf.selected.delete(n); else Pdf.selected.add(n);
+  tile.setAttribute('aria-selected', Pdf.selected.has(n) ? 'true' : 'false');
+  updatePdfUI();
+}
+/** Pdf.selected の内容をタイルの aria-selected に反映 */
+function syncPdfTiles() {
+  $$('#pdfGrid .pdf-page').forEach(t => t.setAttribute('aria-selected', Pdf.selected.has(Number(t.dataset.page)) ? 'true' : 'false'));
+  updatePdfUI();
+}
+function updatePdfUI() {
+  const n = Pdf.selected.size;
+  const btn = $('#btnPdfImport');
+  btn.disabled = n === 0;
+  btn.textContent = n ? '選んだページを取り込む（' + n + ' ページ）' : '選んだページを取り込む';
+  $('#pdfHint').textContent = n ? n + ' ページを選択中（' + Array.from(Pdf.selected).sort((a, b) => a - b).slice(0, 12).join(', ') + (n > 12 ? ', …' : '') + '）' : 'ページをタップして選んでください';
+}
+/**
+ * 「3-5, 8」のようなページ指定を解釈して Set を返す。全角数字・全角カンマ・「〜」「ー」等も受け付ける。
+ * 範囲 a-b は 1..max に切り詰め、単独の番号は範囲外なら無視する。
+ */
+function parsePdfRange(text, max) {
+  const s = String(text || '')
+    .replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0))
+    .replace(/[、，]/g, ',')
+    .replace(/[〜～ー－‐–—]/g, '-')
+    .replace(/\s*-\s*/g, '-');
+  const pages = new Set();
+  for (const tok of s.split(/[,\s]+/)) {
+    if (!tok) continue;
+    const m = /^(\d+)(?:-(\d+))?$/.exec(tok); if (!m) continue;
+    if (m[2] === undefined) { const p = parseInt(m[1], 10); if (p >= 1 && p <= max) pages.add(p); continue; }
+    let a = parseInt(m[1], 10), b = parseInt(m[2], 10);
+    if (a > b) { const t = a; a = b; b = t; }
+    if (b < 1 || a > max) continue;
+    a = BU.clamp(a, 1, max); b = BU.clamp(b, 1, max);
+    for (let p = a; p <= b; p++) pages.add(p);
+  }
+  return pages;
+}
+function applyPdfRangeInput() {
+  const input = $('#pdfRange');
+  const pages = parsePdfRange(input.value, Pdf.pageCount);
+  if (!pages.size) { toast('ページ番号を確認してください（例: 3-5, 8）'); input.focus(); return; }
+  for (const p of pages) Pdf.selected.add(p);   // 既存の選択に追加（解除しない）
+  syncPdfTiles();
+  input.value = '';
+  announce(pages.size + 'ページを選択に追加しました');
+}
+/** 選んだページを順に画像化して保存し、最初のページをマーク画面で開く */
+async function importPdfPages(pages) {
+  const total = pages.length; if (!total || !Pdf.doc) return;
+  const sessions = [];
+  try {
+    for (let i = 0; i < total; i++) {
+      const n = pages[i];
+      showLoading('ページ ' + n + ' を取り込んでいます…（' + (i + 1) + '/' + total + '）');
+      const canvas = await renderPdfPage(n, MAX_LONG_EDGE);
+      const main = await downscaleToJpeg(canvas, MAX_LONG_EDGE, 0.85);
+      const thumb = await downscaleToJpeg(canvas, THUMB_LONG_EDGE, 0.7);
+      canvas.width = 0; canvas.height = 0;   // 大きなキャンバスのメモリを早めに解放
+      const title = Pdf.name.slice(0, 40) + ' p.' + n + (Pdf.pageCount > 1 ? '/' + Pdf.pageCount : '');
+      const session = await backend.createSession(main.blob, {
+        width: main.width, height: main.height, thumbBlob: thumb.blob, title,
+        source: { type: 'pdf', file: Pdf.name, page: n, pages: Pdf.pageCount }
+      });
+      sessions.push(session);
+    }
+    closePdfPicker();
+    toast(sessions.length > 1 ? sessions.length + 'ページを取り込みました。2ページ目以降は「履歴」から開けます' : 'PDFのページを取り込みました', 3500);
+    await openSession(sessions[0]);
+  } catch (e) {
+    console.error(e);
+    toast('取り込みに失敗しました: ' + ((e && e.message) || e) + (sessions.length ? '（' + sessions.length + 'ページは履歴に保存済み）' : ''), 4000);
+  } finally { hideLoading(); }
+}
+/** 選択画面を片付ける（開いている PDF を破棄し、進行中のサムネイル描画も無効化） */
+function closePdfPicker() {
+  Pdf.generation++;
+  if (Pdf.observer) { try { Pdf.observer.disconnect(); } catch (e) { /* ignore */ } Pdf.observer = null; }
+  Pdf.queue = []; Pdf.active = 0;
+  const task = Pdf.task; Pdf.task = null; Pdf.doc = null;
+  try { if (task) { const p = task.destroy(); if (p && p.catch) p.catch(() => { /* ignore */ }); } } catch (e) { /* ignore */ }
+  Pdf.selected.clear(); Pdf.name = ''; Pdf.pageCount = 0;
+  $('#pdfGrid').innerHTML = '';
+  $('#pdfRange').value = '';
+  $('#pdfName').textContent = ''; $('#pdfPages').textContent = '';
+  updatePdfUI();
+}
+
+/* ---------------- 画像ドキュメント（レイヤー） ---------------- */
+function createImageDoc(img, W, H) {
+  const mk = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; return c; };
+  return { img, W, H, markerLayer: mk(), pencilLayer: mk() };
+}
+function drawStrokePath(ctx, s) {
+  const pts = s.points; if (!pts || !pts.length) return;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = s.width;
+  if (pts.length === 1) { ctx.beginPath(); ctx.arc(pts[0].x, pts[0].y, s.width / 2, 0, Math.PI * 2); ctx.fill(); return; }
+  ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.stroke();
+}
+function rebuildLayers() {
+  const d = App.doc; if (!d) return;
+  const mc = d.markerLayer.getContext('2d'), pc = d.pencilLayer.getContext('2d');
+  mc.clearRect(0, 0, d.W, d.H); pc.clearRect(0, 0, d.W, d.H);
+  for (const s of App.strokes) drawStrokePath(s.tool === 'marker' ? mc : pc, s);
+}
+/** 画像 + マーク層を、画像座標の任意矩形 src から dst へ描く（クイズ・サムネイル共通） */
+function drawDocRegion(ctx, doc, src, dst, opts) {
+  opts = opts || {};
+  ctx.save();
+  ctx.beginPath(); ctx.rect(dst.x, dst.y, dst.w, dst.h); ctx.clip();
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(doc.img, src.x, src.y, src.w, src.h, dst.x, dst.y, dst.w, dst.h);
+  if (opts.withHighlights) {
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(doc.markerLayer, src.x, src.y, src.w, src.h, dst.x, dst.y, dst.w, dst.h);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(doc.pencilLayer, src.x, src.y, src.w, src.h, dst.x, dst.y, dst.w, dst.h);
+  }
+  ctx.restore();
+}
+function roundedRectPath(ctx, x, y, w, h, r) {
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+/* ---------------- サンプル画像（架空の教科書ページをキャンバスで生成） ---------------- */
+const SAMPLE_FONT = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif';
+const SAMPLE_PAGE = {
+  title: '光合成のしくみ',
+  chapter: '第2章 植物のはたらき',
+  blocks: [
+    { type: 'p', text: '植物は葉にある葉緑体で光合成を行う。光合成では、水と二酸化炭素から光のエネルギーを使ってデンプンなどの養分と酸素をつくる。' },
+    { type: 'p', text: '葉の裏側に多い気孔からは水蒸気が出ていき、これを蒸散という。蒸散によって根からの水の吸い上げがさかんになる。' },
+    { type: 'p', text: '養分は師管を、水は道管を通って運ばれる。この2つの管をまとめて維管束という。' },
+    { type: 'fig' },
+    { type: 'h', text: '水の三態' },
+    { type: 'p', text: '水は温度によって固体・液体・気体の3つの状態に変化する。液体が気体になる変化を蒸発、固体が液体になる変化を融解という。' },
+    { type: 'p', text: '水は0℃で融解し、100℃で沸騰する。固体から直接気体になる変化を昇華といい、ドライアイスが例として知られる。' }
+  ],
+  // デモで自動マークする語句（順番に最大5つ）
+  demoTerms: ['葉緑体', '蒸散', '維管束', '融解', '昇華']
+};
+/** サンプルページを描き、{blob, width, height, termBoxes} を返す */
+async function generateSamplePage() {
+  const W = 1200, H = 1600;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  // 紙
+  ctx.fillStyle = '#fbf8f0'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = 'rgba(0,0,0,0.025)';
+  for (let i = 0; i < 1400; i++) { ctx.fillRect(Math.random() * W, Math.random() * H, 2, 2); }
+  // 章ヘッダー
+  ctx.fillStyle = '#2f6fb2'; ctx.fillRect(0, 0, W, 70);
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 28px ' + SAMPLE_FONT; ctx.textBaseline = 'middle'; ctx.fillText(SAMPLE_PAGE.chapter, 60, 36);
+  ctx.textAlign = 'right'; ctx.fillText('12', W - 60, 36); ctx.textAlign = 'left';
+  // タイトル
+  ctx.fillStyle = '#1d3f66'; ctx.font = 'bold 54px ' + SAMPLE_FONT; ctx.textBaseline = 'alphabetic'; ctx.fillText(SAMPLE_PAGE.title, 80, 160);
+  ctx.fillStyle = '#f2b632'; ctx.fillRect(80, 178, 300, 8);
+  // 本文レイアウト（文字単位で折り返し、語句が行をまたがないように改行）
+  const termBoxes = {};
+  const marginL = 90, marginR = W - 90, lineH = 60, fontSize = 36;
+  ctx.font = fontSize + 'px ' + SAMPLE_FONT; ctx.textBaseline = 'alphabetic'; ctx.fillStyle = '#222222';
+  let y = 250;
+  const layoutParagraph = (text, indent) => {
+    const chars = Array.from(text);
+    let x = marginL + (indent ? fontSize : 0);
+    const positions = [];
+    for (let i = 0; i < chars.length; i++) {
+      const ch = chars[i];
+      // 語句の先頭なら、その語句が行に収まるか確認
+      let needW = ctx.measureText(ch).width;
+      for (const t of SAMPLE_PAGE.demoTerms) {
+        if (text.startsWith(t, i)) { needW = Math.max(needW, ctx.measureText(t).width); }
+      }
+      if (x + needW > marginR) { x = marginL; y += lineH; }
+      ctx.fillText(ch, x, y);
+      positions.push({ x, y, w: ctx.measureText(ch).width });
+      x += positions[positions.length - 1].w;
+    }
+    for (const t of SAMPLE_PAGE.demoTerms) {
+      let idx = text.indexOf(t);
+      while (idx >= 0) {
+        const first = positions[idx], last = positions[idx + t.length - 1];
+        if (first && last && !termBoxes[t]) termBoxes[t] = { x: first.x, y: first.y - fontSize * 0.9, w: (last.x + last.w) - first.x, h: fontSize * 1.15 };
+        idx = text.indexOf(t, idx + 1);
+      }
+    }
+    y += lineH + 16;
+  };
+  for (const b of SAMPLE_PAGE.blocks) {
+    if (b.type === 'p') { ctx.font = fontSize + 'px ' + SAMPLE_FONT; ctx.fillStyle = '#222222'; layoutParagraph(b.text, true); }
+    else if (b.type === 'h') {
+      y += 10; ctx.fillStyle = '#2f6fb2'; ctx.fillRect(80, y - 40, 12, 48);
+      ctx.fillStyle = '#1d3f66'; ctx.font = 'bold 44px ' + SAMPLE_FONT; ctx.fillText(b.text, 108, y); y += lineH + 24;
+    } else if (b.type === 'fig') {
+      // 図1: 葉のつくり（簡略図）
+      const fx = 90, fy = y - 20, fw = W - 180, fh = 260;
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(fx, fy, fw, fh); ctx.strokeStyle = '#bcc6d3'; ctx.lineWidth = 3; ctx.strokeRect(fx, fy, fw, fh);
+      ctx.fillStyle = '#7fbf5a'; ctx.beginPath(); ctx.ellipse(fx + 260, fy + 130, 190, 90, -0.25, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#3d7a2a'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(fx + 90, fy + 175); ctx.lineTo(fx + 430, fy + 85); ctx.stroke();
+      ctx.lineWidth = 2; for (let i = 1; i <= 5; i++) { const px = fx + 90 + i * 55, py = fy + 175 - i * 15; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + 30, py - 60); ctx.stroke(); ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + 10, py + 55); ctx.stroke(); }
+      ctx.fillStyle = '#333333'; ctx.font = '26px ' + SAMPLE_FONT;
+      ctx.fillText('図1 葉のつくり', fx + 20, fy + fh - 20);
+      ctx.fillText('表側：さく状組織', fx + 560, fy + 70); ctx.fillText('裏側：海綿状組織・気孔', fx + 560, fy + 130); ctx.fillText('葉脈＝維管束の集まり', fx + 560, fy + 190);
+      ctx.strokeStyle = '#888888'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(fx + 540, fy + 60); ctx.lineTo(fx + 400, fy + 100); ctx.stroke();
+      y = fy + fh + 70;
+    }
+  }
+  // フッター
+  ctx.fillStyle = '#8a94a3'; ctx.font = '22px ' + SAMPLE_FONT; ctx.fillText('※ このページはアプリ内で自動生成した架空のサンプルです', 80, H - 50);
+  const blob = await canvasToBlob(c, 'image/jpeg', 0.85);
+  const tc = document.createElement('canvas'); tc.width = 180; tc.height = 240; tc.getContext('2d').drawImage(c, 0, 0, 180, 240);
+  const thumb = await canvasToBlob(tc, 'image/jpeg', 0.7);
+  return { blob, thumb, width: W, height: H, termBoxes };
+}
+async function startSample(demo) {
+  showLoading(demo ? 'デモを準備しています…' : 'サンプルを作成しています…');
+  try {
+    const sample = await generateSamplePage();
+    const session = await backend.createSession(sample.blob, { width: sample.width, height: sample.height, thumbBlob: sample.thumb, title: (demo ? 'デモ: ' : 'サンプル: ') + SAMPLE_PAGE.title, source: { type: demo ? 'demo' : 'sample' } });
+    await openSession(session, {
+      afterOpen: async () => {
+        if (!demo) return;
+        // 自動マーク: 語句の位置にマーカーを引き、語句も事前入力
+        const width = Math.round(Math.min(sample.width, sample.height) * 0.04);
+        const strokes = [];
+        for (const t of SAMPLE_PAGE.demoTerms) {
+          const b = sample.termBoxes[t]; if (!b) continue;
+          const cy = b.y + b.h / 2; const pts = [];
+          for (let i = 0; i <= 8; i++) pts.push({ x: b.x + (b.w * i) / 8, y: cy + Math.sin(i * 1.3) * 1.5 });
+          strokes.push({ id: BU.uid(), tool: 'marker', color: '#FFEB3B', width, points: pts });
+        }
+        App.strokes = strokes; rebuildLayers();
+        const regions = await backend.saveMarks(App.session.id, App.strokes);
+        const terms = {};
+        for (const t of SAMPLE_PAGE.demoTerms) {
+          const b = sample.termBoxes[t]; if (!b) continue;
+          const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+          const r = regions.find(rg => cx >= rg.x && cx <= rg.x + rg.w && cy >= rg.y && cy <= rg.y + rg.h);
+          if (r) terms[r.id] = t;
+        }
+        App.regions = await backend.saveTerms(App.session.id, terms);
+        App.highlight = true; $('#btnHighlight').setAttribute('aria-pressed', 'true');
+        updateMarkUI(); renderMark();
+        showStageHint('デモ: 5か所を自動でマークしました。「クイズを作る」を押してください');
+      }
+    });
+  } catch (e) { console.error(e); toast('サンプルの作成に失敗しました'); }
+  finally { hideLoading(); }
+}
+</script>
+<script>
+'use strict';
+/* =====================================================================
+ *  ② マーク画面: キャンバス描画エンジン（Pointer Events / ベクトルストローク）
+ * ===================================================================== */
+const markCanvas = $('#markCanvas');
+const stage = $('#stage');
+const view = { scale: 1, tx: 0, ty: 0, fit: 1 };
+let renderQueued = false;
+let saveTimer = null, savePromise = Promise.resolve();
+const pointers = new Map();
+let gesture = null;
+let longPressTimer = null;
+let hintTimer = null;
+
+const WIDTH_TABLE = {
+  marker: { thin: 0.025, mid: 0.04, thick: 0.06 },
+  pencil: { thin: 0.003, mid: 0.005, thick: 0.008 }
+};
+function currentWidth() {
+  const d = App.doc; const shortSide = Math.min(d.W, d.H);
+  const tool = App.tool === 'pencil' ? 'pencil' : 'marker';
+  return Math.max(tool === 'pencil' ? 2 : 8, Math.round(shortSide * WIDTH_TABLE[tool][App.widthKey]));
+}
+function showStageHint(text, ms) {
+  const el = $('#stageHint'); el.textContent = text; el.classList.remove('fade');
+  clearTimeout(hintTimer); hintTimer = setTimeout(() => el.classList.add('fade'), ms || 3200);
+}
+
+/* ---- ビュー変換 ---- */
+function stageSize() { const r = stage.getBoundingClientRect(); return { w: Math.max(1, r.width), h: Math.max(1, r.height) }; }
+function resizeMarkCanvas() {
+  const { w, h } = stageSize(); const dpr = DPR();
+  if (markCanvas.width !== Math.round(w * dpr) || markCanvas.height !== Math.round(h * dpr)) {
+    markCanvas.width = Math.round(w * dpr); markCanvas.height = Math.round(h * dpr);
+  }
+  if (App.doc) { clampView(); renderMark(); }
+}
+function fitView() {
+  const d = App.doc; if (!d) return;
+  const { w, h } = stageSize();
+  view.fit = Math.min(w / d.W, h / d.H);
+  view.scale = view.fit;
+  view.tx = (w - d.W * view.scale) / 2; view.ty = (h - d.H * view.scale) / 2;
+  updateZoomBadge(); renderMark();
+}
+function clampView() {
+  const d = App.doc; if (!d) return;
+  const { w, h } = stageSize();
+  view.fit = Math.min(w / d.W, h / d.H);
+  view.scale = BU.clamp(view.scale, view.fit * 0.8, view.fit * 8);
+  const iw = d.W * view.scale, ih = d.H * view.scale;
+  if (iw <= w) view.tx = (w - iw) / 2; else view.tx = BU.clamp(view.tx, w - iw - 40, 40);
+  if (ih <= h) view.ty = (h - ih) / 2; else view.ty = BU.clamp(view.ty, h - ih - 40, 40);
+  updateZoomBadge();
+}
+function updateZoomBadge() { $('#zoomBadge').textContent = Math.round((view.scale / view.fit) * 100) + '%'; }
+function screenToImg(p) { return { x: (p.x - view.tx) / view.scale, y: (p.y - view.ty) / view.scale }; }
+function stagePoint(e) { const r = stage.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+
+/* ---- 描画 ---- */
+function renderMark() {
+  if (renderQueued) return; renderQueued = true;
+  requestAnimationFrame(() => { renderQueued = false; paintMark(); });
+}
+function paintMark() {
+  const d = App.doc; if (!d || App.screen !== 'mark') return;
+  const ctx = markCanvas.getContext('2d'); const dpr = DPR();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, markCanvas.width, markCanvas.height);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.save();
+  ctx.translate(view.tx, view.ty); ctx.scale(view.scale, view.scale);
+  ctx.imageSmoothingEnabled = true;
+  // 紙の影
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(4 / view.scale, 4 / view.scale, d.W, d.H);
+  ctx.drawImage(d.img, 0, 0, d.W, d.H);
+  ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(d.markerLayer, 0, 0);
+  ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(d.pencilLayer, 0, 0);
+  if (gesture && gesture.type === 'draw' && gesture.stroke.points.length) {
+    ctx.globalCompositeOperation = gesture.stroke.tool === 'marker' ? 'multiply' : 'source-over';
+    drawStrokePath(ctx, gesture.stroke);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  if (App.highlight && App.regions.length) {
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(0, 0, d.W, d.H);
+    const pad = Math.max(4, d.W * 0.006);
+    for (const r of App.regions) {
+      const rr = BU.clampRect({ x: r.x - pad, y: r.y - pad, w: r.w + pad * 2, h: r.h + pad * 2 }, d.W, d.H);
+      ctx.save(); roundedRectPath(ctx, rr.x, rr.y, rr.w, rr.h, pad * 1.5); ctx.clip();
+      ctx.drawImage(d.img, rr.x, rr.y, rr.w, rr.h, rr.x, rr.y, rr.w, rr.h);
+      ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(d.markerLayer, rr.x, rr.y, rr.w, rr.h, rr.x, rr.y, rr.w, rr.h);
+      ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(d.pencilLayer, rr.x, rr.y, rr.w, rr.h, rr.x, rr.y, rr.w, rr.h);
+      ctx.restore();
+      ctx.lineWidth = 3 / view.scale; ctx.strokeStyle = '#ff8f00';
+      roundedRectPath(ctx, rr.x, rr.y, rr.w, rr.h, pad * 1.5); ctx.stroke();
+      const br = 13 / view.scale;
+      ctx.fillStyle = '#ff8f00'; ctx.beginPath(); ctx.arc(rr.x, rr.y, br, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold ' + (14 / view.scale) + 'px ' + SAMPLE_FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(String(r.index), rr.x, rr.y + 0.5 / view.scale);
+    }
+  }
+  ctx.restore();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+/* ---- 履歴・保存 ---- */
+function pushHistory() {
+  App.undoStack.push(App.strokes.slice()); if (App.undoStack.length > 60) App.undoStack.shift();
+  App.redoStack = [];
+}
+function commitStrokes(newStrokes) {
+  pushHistory(); App.strokes = newStrokes; rebuildLayers(); renderMark(); scheduleSave(); updateMarkUI();
+}
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { flushSave(); }, 250);
+}
+function flushSave() {
+  clearTimeout(saveTimer);
+  if (!App.session) return Promise.resolve();
+  const strokes = App.strokes;
+  savePromise = savePromise.then(() => backend.saveMarks(App.session.id, strokes)).then(regions => {
+    App.regions = regions;
+    updateMarkUI(); renderMark();
+  }).catch(e => { console.error(e); toast('保存に失敗しました'); });
+  return savePromise;
+}
+function updateMarkUI() {
+  const n = App.regions.length;
+  const badge = $('#regionBadge');
+  badge.textContent = n ? n + 'か所マーク済み' : 'まだマークがありません';
+  badge.classList.toggle('has', n > 0);
+  $('#btnUndo').disabled = App.undoStack.length === 0;
+  $('#btnRedo').disabled = App.redoStack.length === 0;
+  $('#btnClearAll').disabled = App.strokes.length === 0;
+  const btn = $('#btnMakeQuiz');
+  btn.disabled = n < 2;
+  btn.textContent = n >= 2 ? 'クイズを作る（' + n + 'か所）' : 'クイズを作る';
+  const hint = $('#makeHint');
+  if (n < 2) hint.textContent = '2か所以上マークするとクイズを作れます（現在 ' + n + 'か所）';
+  else {
+    const cnt = App.settings.count === 'all' ? Math.min(n, 10) : Math.min(n, parseInt(App.settings.count, 10));
+    const modeLabel = { auto: '自動', image: '画像で選ぶ', text: '文字で選ぶ' }[App.settings.mode];
+    hint.textContent = diffLabel(App.settings.difficulty) + ' · ' + cnt + '問 · ' + modeLabel;
+  }
+}
+
+/* ---- ストローク操作 ---- */
+function newStroke(p) {
+  return { id: BU.uid(), tool: App.tool === 'pencil' ? 'pencil' : 'marker', color: App.tool === 'pencil' ? App.pencilColor : App.color, width: currentWidth(), points: [{ x: p.x, y: p.y }] };
+}
+function distToSegment(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y; const l2 = dx * dx + dy * dy;
+  let t = l2 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2 : 0; t = BU.clamp(t, 0, 1);
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+function hitStroke(p) {
+  const tol = 14 / view.scale;
+  for (let i = App.strokes.length - 1; i >= 0; i--) {
+    const s = App.strokes[i]; const r = s.width / 2 + tol; const pts = s.points;
+    if (pts.length === 1) { if (Math.hypot(p.x - pts[0].x, p.y - pts[0].y) <= r) return s; continue; }
+    for (let k = 1; k < pts.length; k++) if (distToSegment(p, pts[k - 1], pts[k]) <= r) return s;
+  }
+  return null;
+}
+function eraseAt(p) {
+  const s = hitStroke(p); if (!s) return false;
+  commitStrokes(App.strokes.filter(x => x !== s));
+  return true;
+}
+function regionAt(p) { return App.regions.find(r => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h) || null; }
+async function deleteRegion(r) {
+  const ok = await confirmDialog({ title: '領域 ' + r.index + ' を削除', message: 'この領域のマーク（' + r.strokeIds.length + '本）を削除しますか？', okText: '削除', danger: true });
+  if (!ok) return;
+  commitStrokes(App.strokes.filter(s => !r.strokeIds.includes(s.id)));
+  toast('領域 ' + r.index + ' を削除しました');
+}
+
+/* ---- Pointer Events ---- */
+stage.addEventListener('pointerdown', e => {
+  if (!App.doc) return;
+  e.preventDefault();
+  try { stage.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+  const sp = stagePoint(e);
+  pointers.set(e.pointerId, sp);
+  $('#stageHint').classList.add('fade');
+  if (pointers.size === 1) {
+    if (gesture && gesture.type === 'afterPinch') gesture = null;
+    const p = screenToImg(sp);
+    if (App.tool === 'hand') gesture = { type: 'pan', last: sp };
+    else if (App.tool === 'eraser') { gesture = { type: 'erase' }; eraseAt(p); }
+    else {
+      gesture = { type: 'draw', stroke: newStroke(p), start: sp, t0: performance.now(), moved: false };
+      renderMark();
+      if (App.highlight) {
+        const r = regionAt(p);
+        if (r) { clearTimeout(longPressTimer); longPressTimer = setTimeout(() => { if (gesture && gesture.type === 'draw' && !gesture.moved) { gesture = null; pointers.clear(); renderMark(); deleteRegion(r); } }, 600); }
+      }
+    }
+  } else if (pointers.size === 2) {
+    clearTimeout(longPressTimer);
+    if (gesture && gesture.type === 'draw') {
+      // 2本目の指が触れたら描画を中断（短い/誤タッチのストロークは破棄、長いものは確定）
+      const s = gesture.stroke;
+      if (s.points.length >= 12 && performance.now() - gesture.t0 > 350) commitStrokes(App.strokes.concat([s]));
+    }
+    const [a, b] = Array.from(pointers.values());
+    gesture = { type: 'pinch', dist: Math.hypot(a.x - b.x, a.y - b.y), mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, scale: view.scale, tx: view.tx, ty: view.ty };
+    renderMark();
+  }
+});
+stage.addEventListener('pointermove', e => {
+  if (!App.doc || !pointers.has(e.pointerId)) return;
+  e.preventDefault();
+  const sp = stagePoint(e); pointers.set(e.pointerId, sp);
+  if (!gesture) return;
+  if (gesture.type === 'pinch' && pointers.size >= 2) {
+    const [a, b] = Array.from(pointers.values());
+    const dist = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    const s = BU.clamp(gesture.scale * (dist / gesture.dist), view.fit * 0.8, view.fit * 8);
+    // 開始時の中点に対応する画像座標を維持
+    const ix = (gesture.mid.x - gesture.tx) / gesture.scale, iy = (gesture.mid.y - gesture.ty) / gesture.scale;
+    view.scale = s; view.tx = mid.x - ix * s; view.ty = mid.y - iy * s;
+    clampView(); renderMark();
+  } else if (gesture.type === 'pan') {
+    view.tx += sp.x - gesture.last.x; view.ty += sp.y - gesture.last.y; gesture.last = sp; clampView(); renderMark();
+  } else if (gesture.type === 'draw') {
+    const p = screenToImg(sp); const pts = gesture.stroke.points; const last = pts[pts.length - 1];
+    if (Math.hypot(sp.x - gesture.start.x, sp.y - gesture.start.y) > 8) { gesture.moved = true; clearTimeout(longPressTimer); }
+    if (Math.hypot(p.x - last.x, p.y - last.y) >= 1.5 / view.scale) { pts.push({ x: p.x, y: p.y }); renderMark(); }
+  } else if (gesture.type === 'erase') {
+    eraseAt(screenToImg(sp));
+  }
+});
+function endPointer(e) {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.delete(e.pointerId);
+  clearTimeout(longPressTimer);
+  if (!gesture) return;
+  if (gesture.type === 'draw') {
+    const s = gesture.stroke; gesture = null;
+    if (s.points.length >= 1) {
+      // 点だけのタップは短いストロークに（マーカーの点も出題対象にできる）
+      if (s.points.length === 1) s.points.push({ x: s.points[0].x + 0.5, y: s.points[0].y });
+      commitStrokes(App.strokes.concat([s]));
+    } else renderMark();
+  } else if (gesture.type === 'pinch') {
+    if (pointers.size < 2) gesture = pointers.size ? { type: 'afterPinch' } : null;
+  } else if (gesture.type === 'afterPinch') { if (!pointers.size) gesture = null; }
+  else gesture = null;
+}
+stage.addEventListener('pointerup', endPointer);
+stage.addEventListener('pointercancel', endPointer);
+stage.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') endPointer(e); });
+stage.addEventListener('wheel', e => {
+  if (!App.doc) return; e.preventDefault();
+  const sp = stagePoint(e); const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+  const s = BU.clamp(view.scale * factor, view.fit * 0.8, view.fit * 8);
+  const ix = (sp.x - view.tx) / view.scale, iy = (sp.y - view.ty) / view.scale;
+  view.scale = s; view.tx = sp.x - ix * s; view.ty = sp.y - iy * s; clampView(); renderMark();
+}, { passive: false });
+stage.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('resize', () => { if (App.screen === 'mark') resizeMarkCanvas(); });
+if (window.visualViewport) window.visualViewport.addEventListener('resize', () => { if (App.screen === 'mark') resizeMarkCanvas(); });
+
+/* ---- ツールバー ---- */
+$$('.tool[data-tool]').forEach(btn => btn.addEventListener('click', () => {
+  App.tool = btn.dataset.tool;
+  $$('.tool[data-tool]').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+  const hints = { marker: 'マーカー: 覚えたい語句を指でなぞる', pencil: '鉛筆: 下線や丸囲みもマークになります', eraser: '消しゴム: 線をタップすると1本まるごと消えます', hand: '移動: 1本指でドラッグ' };
+  showStageHint(hints[App.tool]);
+  updateSwatchSelection();
+}));
+function updateSwatchSelection() {
+  const cur = App.tool === 'pencil' ? App.pencilColor : App.color;
+  $$('#swatches .swatch[data-color]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.color.toLowerCase() === cur.toLowerCase())));
+  const anyMatch = $$('#swatches .swatch[data-color]').some(b => b.dataset.color.toLowerCase() === cur.toLowerCase());
+  const custom = $('#swatchCustom');
+  custom.setAttribute('aria-checked', String(!anyMatch));
+  custom.classList.toggle('picked', !anyMatch);
+  if (!anyMatch) custom.style.setProperty('--sw', cur);
+}
+$$('#swatches .swatch[data-color]').forEach(btn => btn.addEventListener('click', () => {
+  if (App.tool === 'pencil') App.pencilColor = btn.dataset.color; else App.color = btn.dataset.color;
+  if (App.tool === 'eraser' || App.tool === 'hand') { App.tool = 'marker'; $$('.tool[data-tool]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tool === 'marker'))); }
+  updateSwatchSelection();
+}));
+$('#colorPicker').addEventListener('input', e => {
+  const c = e.target.value;
+  if (App.tool === 'pencil') App.pencilColor = c; else App.color = c;
+  if (App.tool === 'eraser' || App.tool === 'hand') { App.tool = 'marker'; $$('.tool[data-tool]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tool === 'marker'))); }
+  updateSwatchSelection();
+});
+$$('.wbtn').forEach(btn => btn.addEventListener('click', () => {
+  App.widthKey = btn.dataset.width;
+  $$('.wbtn').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+}));
+$('#btnUndo').addEventListener('click', () => {
+  if (!App.undoStack.length) return;
+  App.redoStack.push(App.strokes); App.strokes = App.undoStack.pop();
+  rebuildLayers(); renderMark(); scheduleSave(); updateMarkUI();
+});
+$('#btnRedo').addEventListener('click', () => {
+  if (!App.redoStack.length) return;
+  App.undoStack.push(App.strokes); App.strokes = App.redoStack.pop();
+  rebuildLayers(); renderMark(); scheduleSave(); updateMarkUI();
+});
+$('#btnClearAll').addEventListener('click', async () => {
+  if (!App.strokes.length) return;
+  const ok = await confirmDialog({ title: '全消し', message: 'すべてのマーク（' + App.strokes.length + '本）を消しますか？（「戻す」で復元できます）', okText: '全消し', danger: true });
+  if (ok) commitStrokes([]);
+});
+$('#btnHighlight').addEventListener('click', () => {
+  App.highlight = !App.highlight;
+  $('#btnHighlight').setAttribute('aria-pressed', String(App.highlight));
+  if (App.highlight) showStageHint(App.regions.length ? '出題される場所を強調表示中。番号を長押しで削除' : 'まだマークがありません');
+  renderMark();
+});
+$$('#diffSeg input').forEach(r => r.addEventListener('change', () => { App.settings.difficulty = r.value; updateMarkUI(); }));
+$('#selCount').addEventListener('change', e => { App.settings.count = e.target.value; updateMarkUI(); });
+$('#selMode').addEventListener('change', e => { App.settings.mode = e.target.value; updateMarkUI(); });
+$('#btnMakeQuiz').addEventListener('click', async () => {
+  if (App.regions.length < 2) return;
+  await flushSave();
+  openTermsScreen();
+});
+</script>
+<script>
+'use strict';
+/* =====================================================================
+ *  ③ 語句の確認
+ * ===================================================================== */
+let termsSaveTimer = null, termsSavePromise = Promise.resolve();
+function cropThumb(canvas, rect, cssW, cssH, opts) {
+  opts = opts || {};
+  const d = App.doc; if (!d) return;
+  const dpr = DPR(); canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
+  canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--paper').trim() || '#fbfaf5';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const mx = opts.margin === undefined ? 0.18 : opts.margin;
+  let src = { x: rect.x - rect.w * mx, y: rect.y - rect.h * mx * 2, w: rect.w * (1 + 2 * mx), h: rect.h * (1 + 4 * mx) };
+  src = BU.clampRect(src, d.W, d.H);
+  const s = Math.min(canvas.width / src.w, canvas.height / src.h);
+  const dw = src.w * s, dh = src.h * s;
+  const dst = { x: (canvas.width - dw) / 2, y: (canvas.height - dh) / 2, w: dw, h: dh };
+  drawDocRegion(ctx, d, src, dst, { withHighlights: opts.withHighlights !== false });
+  if (opts.frame) {
+    ctx.strokeStyle = opts.frame; ctx.lineWidth = 3 * dpr;
+    const fx = dst.x + (rect.x - src.x) * s, fy = dst.y + (rect.y - src.y) * s;
+    roundedRectPath(ctx, fx, fy, rect.w * s, rect.h * s, 6 * dpr); ctx.stroke();
+  }
+}
+function openTermsScreen() {
+  const list = $('#termList'); list.innerHTML = '';
+  $('#termsCount').textContent = '（' + App.regions.length + 'か所）';
+  App.regions.forEach(r => {
+    const item = document.createElement('div'); item.className = 'term-item';
+    const th = document.createElement('div'); th.className = 'term-thumb';
+    const cv = document.createElement('canvas'); th.appendChild(cv);
+    const nb = document.createElement('span'); nb.className = 'num-badge'; nb.textContent = r.index; th.appendChild(nb);
+    const field = document.createElement('div'); field.className = 'term-field';
+    const input = document.createElement('input'); input.type = 'text'; input.value = r.term || ''; input.placeholder = '隠れている語句（任意）';
+    input.setAttribute('aria-label', '領域 ' + r.index + ' の語句'); input.autocomplete = 'off'; input.enterKeyHint = 'next';
+    const st = document.createElement('div'); st.className = 'term-status';
+    const setStatus = () => { const ok = input.value.trim().length > 0; st.textContent = ok ? '入力済み → 文字の4択' : '未入力 → 画像の4択'; st.classList.toggle('ok', ok); };
+    setStatus();
+    input.addEventListener('input', () => { r.term = input.value; setStatus(); scheduleTermsSave(); updateTermSummary(); });
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') { const inputs = $$('#termList input'); const i = inputs.indexOf(input); if (i >= 0 && i < inputs.length - 1) inputs[i + 1].focus(); else input.blur(); } });
+    field.appendChild(input); field.appendChild(st);
+    item.appendChild(th); item.appendChild(field); list.appendChild(item);
+    cropThumb(cv, r, 120, 64, { withHighlights: true });
+  });
+  updateTermSummary();
+  showScreen('terms');
+}
+function updateTermSummary() {
+  const n = App.regions.length, k = App.regions.filter(r => (r.term || '').trim()).length;
+  $('#termSummary').textContent = '語句入力済み ' + k + ' / ' + n + '　（未入力の箇所は画像で出題）';
+}
+function scheduleTermsSave() { clearTimeout(termsSaveTimer); termsSaveTimer = setTimeout(flushTerms, 300); }
+function flushTerms() {
+  clearTimeout(termsSaveTimer);
+  if (!App.session) return Promise.resolve();
+  const terms = {}; for (const r of App.regions) terms[r.id] = r.term || '';
+  termsSavePromise = termsSavePromise.then(() => backend.saveTerms(App.session.id, terms)).then(regions => { App.regions = regions; }).catch(e => console.error(e));
+  return termsSavePromise;
+}
+$('#btnStartQuiz').addEventListener('click', async () => {
+  await flushTerms();
+  let mode = App.settings.mode;
+  if (mode === 'text' && !App.regions.some(r => (r.term || '').trim())) { toast('語句が未入力のため画像で出題します'); mode = 'image'; }
+  await launchQuiz({ difficulty: App.settings.difficulty, count: App.settings.count, mode });
+});
+$('#btnSkipTerms').addEventListener('click', async () => {
+  await flushTerms();
+  await launchQuiz({ difficulty: App.settings.difficulty, count: App.settings.count, mode: 'image' });
+});
+async function launchQuiz(opts) {
+  showLoading('クイズを作成しています…');
+  try {
+    const quiz = await backend.generateQuiz(App.session.id, opts);
+    startQuiz(quiz);
+  } catch (e) {
+    console.warn(e);
+    toast(e.message || 'クイズを作成できませんでした');
+  } finally { hideLoading(); }
+}
+
+/* =====================================================================
+ *  ④ クイズ
+ * ===================================================================== */
+const qCanvas = $('#qCanvas');
+let qCanvasMap = null;   // 画像座標 → キャンバス座標の変換情報（タイプC のタップ判定用）
+function startQuiz(quiz) {
+  App.quiz = quiz; App.qIndex = 0; App.lastSummary = null;
+  showScreen('quiz');
+  renderQuestion();
+  announce('クイズを始めます。全' + quiz.total + '問、難易度は' + DIFFICULTY_POLICY[quiz.difficulty].label + 'です。');
+}
+function currentQuestion() { return App.quiz.questions[App.qIndex]; }
+function renderQuestion() {
+  const quiz = App.quiz, q = currentQuestion();
+  App.answered = false; App.qRevealed = false;
+  $('#qProgress').textContent = (App.qIndex + 1) + '/' + quiz.total;
+  $('#qDiff').textContent = diffLabel(quiz.difficulty) + (q.type === 'C' ? ' · 逆引き' : '');
+  $('#qPrompt').textContent = q.prompt;
+  const fb = $('#qFeedback'); fb.textContent = ''; fb.className = 'q-feedback';
+  $('#hintBox').hidden = true; $('#hintBox').textContent = '';
+  const hintBtn = $('#btnHint'); hintBtn.hidden = !q.hint; hintBtn.disabled = false;
+  $('#btnNext').hidden = true;
+  const sc = $('#screen-quiz .scroll'); if (sc) sc.scrollTop = 0;
+  drawQuestionCanvas(q, { reveal: false });
+  buildChoices(q);
+  if (q.timeLimitMs) startTimer(q.timeLimitMs); else stopTimer();
+  App.qStart = performance.now();
+  announce('第' + (App.qIndex + 1) + '問。' + q.prompt);
+}
+function drawQuestionCanvas(q, opts) {
+  opts = opts || {};
+  const d = App.doc; const wrap = qCanvas.parentElement;
+  const wrapW = Math.max(200, wrap.clientWidth || 340);
+  const ratio = q.context.h / q.context.w;
+  let cssW = wrapW, cssH = Math.round(cssW * ratio);
+  const maxH = Math.max(150, Math.round(window.innerHeight * 0.38));
+  if (cssH > maxH) { cssH = maxH; }
+  const dpr = DPR();
+  qCanvas.width = Math.round(cssW * dpr); qCanvas.height = Math.round(cssH * dpr);
+  qCanvas.style.width = '100%'; qCanvas.style.height = cssH + 'px';
+  const ctx = qCanvas.getContext('2d');
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--paper').trim() || '#fbfaf5';
+  ctx.fillRect(0, 0, qCanvas.width, qCanvas.height);
+  const s = Math.min(qCanvas.width / q.context.w, qCanvas.height / q.context.h);
+  const dw = q.context.w * s, dh = q.context.h * s;
+  const dst = { x: (qCanvas.width - dw) / 2, y: (qCanvas.height - dh) / 2, w: dw, h: dh };
+  qCanvasMap = { s, ox: dst.x - q.context.x * s, oy: dst.y - q.context.y * s, cssScale: 1 / dpr };
+  drawDocRegion(ctx, d, q.context, dst, { withHighlights: q.showHighlights });
+  const toC = r => ({ x: qCanvasMap.ox + r.x * s, y: qCanvasMap.oy + r.y * s, w: r.w * s, h: r.h * s });
+  // マスク（赤シート風）
+  for (const m of q.masks) {
+    if (opts.reveal && m.isTarget) continue;
+    const r = toC(m);
+    ctx.fillStyle = '#d63b3b';
+    roundedRectPath(ctx, r.x, r.y, r.w, r.h, 6 * dpr); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.12)'; roundedRectPath(ctx, r.x + 2, r.y + 2, r.w - 4, Math.max(2, r.h / 2 - 2), 5 * dpr); ctx.fill();
+    if (m.label) {
+      const fs = Math.max(12 * dpr, Math.min(r.h * 0.7, r.w * 0.5));
+      ctx.fillStyle = '#fff'; ctx.font = 'bold ' + fs + 'px ' + SAMPLE_FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(m.label, r.x + r.w / 2, r.y + r.h / 2 + fs * 0.05);
+    }
+  }
+  if (opts.reveal) {
+    const t = q.masks.find(m => m.isTarget) || q.targetRect;
+    const r = toC(t);
+    // 正解箇所は素の写真（マーカーなし）を見せてから緑枠
+    drawDocRegion(ctx, d, { x: t.x, y: t.y, w: t.w, h: t.h }, r, { withHighlights: false });
+    ctx.strokeStyle = '#16a34a'; ctx.lineWidth = 4 * dpr;
+    roundedRectPath(ctx, r.x, r.y, r.w, r.h, 6 * dpr); ctx.stroke();
+  }
+  if (opts.selectedSpot) {
+    const r = toC(opts.selectedSpot);
+    ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 4 * dpr; roundedRectPath(ctx, r.x - 3, r.y - 3, r.w + 6, r.h + 6, 8 * dpr); ctx.stroke();
+  }
+}
+function buildChoices(q) {
+  const box = $('#choices'); box.innerHTML = '';
+  box.className = 'choices' + (q.type === 'B' ? ' grid' : q.type === 'C' ? ' spots' : '');
+  const letters = ['A', 'B', 'C', 'D'];
+  q.choices.forEach((c, i) => {
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'choice' + (c.kind === 'crop' ? ' tile' : ''); btn.dataset.index = i;
+    const letter = document.createElement('span'); letter.className = 'letter'; letter.textContent = letters[i]; btn.appendChild(letter);
+    if (c.kind === 'text') { const t = document.createElement('span'); t.className = 'txt'; t.textContent = c.text; btn.appendChild(t); btn.setAttribute('aria-label', letters[i] + ': ' + c.text); }
+    else if (c.kind === 'crop') {
+      const cv = document.createElement('canvas'); btn.appendChild(cv);
+      btn.setAttribute('aria-label', '選択肢 ' + letters[i] + '（画像）');
+      const tileW = Math.max(120, Math.floor((box.clientWidth || 340) / 2) - 16);
+      cropThumb(cv, c.rect, tileW, Math.round(tileW * 0.55), { withHighlights: false, margin: 0.06 });
+    } else if (c.kind === 'spot') { btn.setAttribute('aria-label', '場所 ' + c.label); btn.classList.add('spot'); btn.style.padding = '10px 0'; const sp = document.createElement('span'); sp.className = 'sr-only'; sp.textContent = c.label; btn.appendChild(sp); }
+    btn.addEventListener('click', () => answer(i));
+    box.appendChild(btn);
+  });
+}
+qCanvas.addEventListener('click', e => {
+  const q = App.quiz && currentQuestion(); if (!q || q.type !== 'C' || App.answered || !qCanvasMap) return;
+  const r = qCanvas.getBoundingClientRect();
+  const cx = (e.clientX - r.left) * (qCanvas.width / r.width), cy = (e.clientY - r.top) * (qCanvas.height / r.height);
+  const ix = (cx - qCanvasMap.ox) / qCanvasMap.s, iy = (cy - qCanvasMap.oy) / qCanvasMap.s;
+  const idx = q.choices.findIndex(c => ix >= c.rect.x - 6 && ix <= c.rect.x + c.rect.w + 6 && iy >= c.rect.y - 6 && iy <= c.rect.y + c.rect.h + 6);
+  if (idx >= 0) answer(idx);
+});
+window.addEventListener('resize', () => { if (App.screen === 'quiz' && App.quiz && App.doc) drawQuestionCanvas(currentQuestion(), { reveal: !!App.qRevealed }); });
+/* ---- タイマー ---- */
+function startTimer(ms) {
+  stopTimer();
+  const bar = $('#timerBar'), fill = $('#timerFill'); bar.hidden = false; fill.classList.remove('low'); fill.style.width = '100%';
+  const deadline = performance.now() + ms;
+  const tick = () => {
+    if (!App.timer) return;
+    const rem = deadline - performance.now(); const ratio = BU.clamp(rem / ms, 0, 1);
+    fill.style.width = (ratio * 100) + '%'; fill.classList.toggle('low', ratio < 0.3);
+    if (rem <= 0) { App.timer = null; answer(-1, true); return; }
+    App.timer.raf = requestAnimationFrame(tick);
+  };
+  App.timer = { raf: requestAnimationFrame(tick) };
+}
+function stopTimer() { if (App.timer) { cancelAnimationFrame(App.timer.raf); App.timer = null; } $('#timerBar').hidden = true; }
+/* ---- 回答 ---- */
+function choiceText(q, idx) {
+  if (idx < 0 || !q.choices[idx]) return '（時間切れ）';
+  const c = q.choices[idx]; const letters = ['A', 'B', 'C', 'D'];
+  if (c.kind === 'text') return c.text;
+  if (c.kind === 'spot') return c.label;
+  return letters[idx];
+}
+async function answer(choiceIdx, timedOut) {
+  if (App.answered) return; App.answered = true; stopTimer();
+  const q = currentQuestion(); const elapsed = performance.now() - App.qStart;
+  $('#btnHint').hidden = true; $('#btnHint').disabled = true;
+  $$('#choices .choice').forEach(b => { b.disabled = true; });
+  let res;
+  try { res = await backend.submitAnswer(App.quiz.id, App.qIndex, timedOut ? -1 : choiceIdx, elapsed); }
+  catch (e) { console.error(e); toast('回答を記録できませんでした'); res = { correct: false, correctIndex: q.correctIndex, timedOut: !!timedOut, points: 0 }; }
+  vibrate(res.correct ? 30 : [60, 40, 60]);
+  const fb = $('#qFeedback');
+  const btns = $$('#choices .choice');
+  if (q.immediateFeedback) {
+    if (btns[res.correctIndex]) btns[res.correctIndex].classList.add('correct');
+    if (!res.correct && choiceIdx >= 0 && btns[choiceIdx]) btns[choiceIdx].classList.add('wrong');
+    const correctText = choiceText(q, res.correctIndex);
+    if (res.correct) { fb.textContent = '正解！' + (q.type === 'A' ? '「' + correctText + '」' : ''); fb.className = 'q-feedback ok'; }
+    else { fb.textContent = (timedOut ? '時間切れ… ' : '不正解… ') + '正解は ' + (q.type === 'A' ? '「' + correctText + '」' : correctText + (q.type === 'B' ? '（緑枠）' : '')); fb.className = 'q-feedback ng'; }
+    App.qRevealed = true;
+    drawQuestionCanvas(q, { reveal: true });
+    const next = $('#btnNext'); next.hidden = false; next.textContent = App.qIndex + 1 < App.quiz.total ? '次へ' : '結果を見る';
+    announce(fb.textContent);
+    try { next.focus({ preventScroll: false }); } catch (e) { /* ignore */ }
+  } else {
+    // 難しい: 正誤は結果画面でまとめて。短いフラッシュのみ
+    if (choiceIdx >= 0 && btns[choiceIdx]) btns[choiceIdx].classList.add('selected');
+    fb.textContent = timedOut ? '時間切れ' : (res.correct ? '○' : '✕');
+    fb.className = 'q-feedback ' + (res.correct ? 'ok' : 'ng');
+    announce(timedOut ? '時間切れ' : '回答しました');
+    setTimeout(nextQuestion, 650);
+  }
+}
+$('#btnHint').addEventListener('click', () => {
+  const q = currentQuestion(); if (!q.hint || App.answered) return;
+  const hb = $('#hintBox'); hb.hidden = false; hb.textContent = q.hint.text;
+  if (q.hint.kind === 'eliminate') { const b = $$('#choices .choice')[q.hint.index]; if (b) { b.classList.add('eliminated'); b.disabled = true; } }
+  $('#btnHint').disabled = true;
+  announce(q.hint.text);
+});
+$('#btnNext').addEventListener('click', nextQuestion);
+async function nextQuestion() {
+  if (!App.quiz) return;
+  if (App.qIndex + 1 < App.quiz.total) { App.qIndex++; renderQuestion(); }
+  else await finishQuizUI();
+}
+async function quitQuiz() {
+  stopTimer();
+  const ok = await confirmDialog({ title: 'クイズを中断', message: '途中の結果は保存されません。マーク画面に戻りますか？', okText: '中断する', danger: true });
+  if (!ok) { const q = currentQuestion(); if (q && q.timeLimitMs && !App.answered) startTimer(Math.max(3000, q.timeLimitMs - (performance.now() - App.qStart))); return; }
+  try { await backend.deleteQuiz(App.quiz.id); } catch (e) { /* ignore */ }
+  App.quiz = null;
+  showScreen('mark');
+}
+$('#btnQuitQuiz').addEventListener('click', quitQuiz);
+
+/* =====================================================================
+ *  ⑤ 結果・復習
+ * ===================================================================== */
+async function finishQuizUI() {
+  showLoading('採点しています…');
+  try {
+    const summary = await backend.finishQuiz(App.quiz.id);
+    App.lastSummary = summary;
+    renderResult(summary);
+    showScreen('result');
+  } catch (e) { console.error(e); toast('採点に失敗しました'); }
+  finally { hideLoading(); }
+}
+function renderResult(summary) {
+  const quiz = summary.quiz; const pct = summary.total ? summary.correct / summary.total : 0;
+  $('#resDiff').textContent = '難易度 ' + diffLabel(quiz.difficulty) + (quiz.mode === 'image' ? ' · 画像' : quiz.mode === 'text' ? ' · 文字' : '');
+  $('#resCorrect').textContent = summary.correct;
+  $('#resTotal').textContent = '/ ' + summary.total + ' 正解';
+  $('#resDetail').textContent = 'スコア ' + summary.points + '点' + (DIFFICULTY_POLICY[quiz.difficulty].speedBonus ? '（速答ボーナス込み）' : '') + ' · 所要 ' + fmtDuration(summary.elapsedMs);
+  $('#resMsg').textContent = pct === 1 ? '完璧！全問正解 🎉' : pct >= 0.8 ? 'よくできました！' : pct >= 0.5 ? 'あと少し！間違えた問題を復習しよう' : '復習してもう一度チャレンジ！';
+  const wrong = summary.wrongRegionIds.length;
+  $('#btnRetryWrong').hidden = wrong === 0;
+  $('#btnRetryWrong').textContent = '間違えた問題だけもう一度（' + wrong + '問）';
+  $('#btnRetryHarder').hidden = quiz.difficulty === 'hard';
+  const nextDiff = DIFFICULTY_ORDER[Math.min(2, DIFFICULTY_ORDER.indexOf(quiz.difficulty) + 1)];
+  $('#btnRetryHarder').textContent = '難易度を上げて再挑戦（' + DIFFICULTY_POLICY[nextDiff].label + '）';
+  App.settings.difficulty = quiz.difficulty;
+  $$('#resDiffSeg input').forEach(r => { r.checked = r.value === quiz.difficulty; });
+  $$('#diffSeg input').forEach(r => { r.checked = r.value === quiz.difficulty; });
+  updateRetrySameLabel();
+  // 復習リスト
+  const list = $('#reviewList'); list.innerHTML = '';
+  const letters = ['A', 'B', 'C', 'D'];
+  quiz.questions.forEach((q, i) => {
+    const a = quiz.answers[i];
+    const item = document.createElement('div'); item.className = 'review-item ' + (a.correct ? 'ok' : 'ng');
+    const th = document.createElement('div'); th.className = 'review-thumb'; const cv = document.createElement('canvas'); th.appendChild(cv);
+    cropThumb(cv, q.targetRect, 96, 60, { withHighlights: false, frame: a.correct ? '#16a34a' : '#dc2626' });
+    const txt = document.createElement('div'); txt.className = 'review-text';
+    const head = document.createElement('div'); head.innerHTML = '<b>Q' + (i + 1) + '</b> <span class="ans">' + (q.type === 'A' ? '穴埋め（文字）' : q.type === 'B' ? '穴埋め（画像）' : '逆引き') + '</span>';
+    txt.appendChild(head);
+    const ans = document.createElement('div'); ans.className = 'ans';
+    if (q.type === 'B') {
+      ans.textContent = a.timedOut ? '時間切れ ／ 正解: ' : (a.correct ? '正解: ' : 'あなた: ' + letters[a.choice] + ' ／ 正解: ');
+      const mini = document.createElement('span'); mini.className = 'mini';
+      if (!a.correct && a.choice >= 0) { const c1 = document.createElement('canvas'); cropThumb(c1, q.choices[a.choice].rect, 56, 32, { withHighlights: false, margin: 0.05 }); mini.appendChild(c1); const arrow = document.createElement('span'); arrow.textContent = '→'; mini.appendChild(arrow); }
+      const c2 = document.createElement('canvas'); cropThumb(c2, q.choices[q.correctIndex].rect, 56, 32, { withHighlights: false, margin: 0.05 }); mini.appendChild(c2);
+      ans.appendChild(mini);
+    } else {
+      const correctText = choiceText(q, q.correctIndex);
+      if (a.correct) ans.innerHTML = '正解: <b></b>';
+      else ans.innerHTML = (a.timedOut ? '時間切れ' : 'あなた: <span class="you"></span>') + ' ／ 正解: <b></b>';
+      const you = ans.querySelector('.you'); if (you) you.textContent = choiceText(q, a.choice);
+      ans.querySelector('b').textContent = q.type === 'C' ? '場所 ' + correctText + '（' + q.term + '）' : correctText;
+    }
+    txt.appendChild(ans);
+    const mark = document.createElement('div');
+    const m = document.createElement('div'); m.className = 'review-mark ' + (a.correct ? 'ok' : 'ng'); m.textContent = a.correct ? '○' : '✕';
+    const t = document.createElement('div'); t.className = 'review-time'; t.textContent = a.timedOut ? '時間切れ' : fmtSec(a.elapsedMs) + (a.points > 100 ? ' +' + (a.points - 100) : '');
+    mark.appendChild(m); mark.appendChild(t);
+    item.appendChild(th); item.appendChild(txt); item.appendChild(mark); list.appendChild(item);
+  });
+}
+function updateRetrySameLabel() {
+  const d = App.settings.difficulty;
+  $('#btnRetrySame').textContent = (d === (App.lastSummary && App.lastSummary.quiz.difficulty) ? '同じ難易度でもう一度' : '「' + DIFFICULTY_POLICY[d].label + '」でもう一度') + '（' + diffLabel(d) + '）';
+}
+$$('#resDiffSeg input').forEach(r => r.addEventListener('change', () => { App.settings.difficulty = r.value; $$('#diffSeg input').forEach(x => { x.checked = x.value === r.value; }); updateRetrySameLabel(); }));
+$('#btnRetryWrong').addEventListener('click', async () => {
+  const s = App.lastSummary; if (!s) return;
+  await launchQuiz({ difficulty: App.settings.difficulty, count: 'all', mode: s.quiz.mode, regionIds: s.wrongRegionIds });
+});
+$('#btnRetrySame').addEventListener('click', async () => {
+  const s = App.lastSummary; if (!s) return;
+  await launchQuiz({ difficulty: App.settings.difficulty, count: App.settings.count, mode: s.quiz.mode });
+});
+$('#btnRetryHarder').addEventListener('click', async () => {
+  const s = App.lastSummary; if (!s) return;
+  const next = DIFFICULTY_ORDER[Math.min(2, DIFFICULTY_ORDER.indexOf(s.quiz.difficulty) + 1)];
+  App.settings.difficulty = next;
+  await launchQuiz({ difficulty: next, count: App.settings.count, mode: s.quiz.mode });
+});
+$('#btnBackToMark').addEventListener('click', () => { showScreen('mark'); });
+$('#btnResHome').addEventListener('click', () => { showScreen('home'); refreshHomeState(); });
+
+/* =====================================================================
+ *  履歴（一覧・削除・書き出し/読み込み）
+ * ===================================================================== */
+async function openHistory() {
+  showLoading('履歴を読み込んでいます…');
+  try {
+    const items = await backend.listHistory();
+    releaseObjectUrls();
+    const list = $('#histList'); list.innerHTML = '';
+    if (!items.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'まだ履歴がありません。写真を撮る・PDFを取り込んでマークするとここに表示されます。'; list.appendChild(e); }
+    for (const it of items) {
+      const card = document.createElement('div'); card.className = 'hist-card';
+      const head = document.createElement('div'); head.className = 'hist-head';
+      const img = document.createElement('img'); img.className = 'hist-thumb'; img.alt = '';
+      if (it.thumbBlob) { const u = URL.createObjectURL(it.thumbBlob); App.objectUrls.push(u); img.src = u; }
+      const meta = document.createElement('div'); meta.className = 'hist-meta';
+      const b = document.createElement('b'); b.textContent = it.title;
+      if (it.source && it.source.type === 'pdf') { const badge = document.createElement('span'); badge.className = 'src-badge'; badge.textContent = 'PDF'; b.appendChild(badge); }
+      meta.appendChild(b);
+      const m1 = document.createElement('div'); m1.textContent = fmtDate(it.updatedAt) + ' · ' + it.regionCount + 'か所' + (it.termCount ? '（語句 ' + it.termCount + '）' : ''); meta.appendChild(m1);
+      const m2 = document.createElement('div'); m2.textContent = it.attempts.length ? '挑戦 ' + it.attempts.length + '回 · 最高 ' + Math.max.apply(null, it.attempts.map(a => a.correct)) + '/' + it.attempts[0].total : 'まだ挑戦なし'; meta.appendChild(m2);
+      head.appendChild(img); head.appendChild(meta); card.appendChild(head);
+      if (it.attempts.length) {
+        const at = document.createElement('div'); at.className = 'hist-attempts';
+        it.attempts.slice(0, 5).forEach(a => {
+          const row = document.createElement('div'); row.className = 'attempt';
+          const d = document.createElement('span'); d.className = 'a-diff'; d.textContent = diffLabel(a.difficulty);
+          const s = document.createElement('span'); s.className = 'a-score'; s.textContent = a.correct + '/' + a.total;
+          const dt = document.createElement('span'); dt.className = 'a-date'; dt.textContent = fmtDate(a.finishedAt) + ' · ' + a.points + '点';
+          const del = document.createElement('button'); del.type = 'button'; del.className = 'icon-btn'; del.setAttribute('aria-label', 'この成績を削除'); del.innerHTML = '<svg class="ic" style="width:18px;height:18px"><use href="#i-trash"></use></svg>';
+          del.addEventListener('click', async () => { if (await confirmDialog({ title: '成績を削除', message: 'この成績を削除しますか？', okText: '削除', danger: true })) { await backend.deleteQuiz(a.id); openHistory(); } });
+          row.appendChild(d); row.appendChild(s); row.appendChild(dt); row.appendChild(del); at.appendChild(row);
+        });
+        card.appendChild(at);
+      }
+      const acts = document.createElement('div'); acts.className = 'hist-actions';
+      const open = document.createElement('button'); open.type = 'button'; open.className = 'btn btn-primary btn-sm'; open.textContent = '開く';
+      open.addEventListener('click', async () => { const s = await backend.getSession(it.id); if (s) await openSession(s); });
+      const exp = document.createElement('button'); exp.type = 'button'; exp.className = 'btn btn-secondary btn-sm'; exp.textContent = '書き出し';
+      exp.addEventListener('click', () => exportSession(it.id, it.title));
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'btn btn-danger btn-sm'; del.textContent = '削除';
+      del.addEventListener('click', async () => {
+        if (await confirmDialog({ title: '写真を削除', message: '「' + it.title + '」とその成績をすべて削除します。元に戻せません。', okText: '削除', danger: true })) {
+          await backend.deleteSession(it.id); if (App.session && App.session.id === it.id) { App.session = null; App.doc = null; } toast('削除しました'); openHistory();
+        }
+      });
+      acts.appendChild(open); acts.appendChild(exp); acts.appendChild(del); card.appendChild(acts);
+      list.appendChild(card);
+    }
+    showScreen('history');
+  } catch (e) { console.error(e); toast('履歴を読み込めませんでした'); }
+  finally { hideLoading(); }
+}
+async function exportSession(id, title) {
+  showLoading('書き出しています…');
+  try {
+    const json = await backend.exportSession(id);
+    const name = 'マーカーでクイズ_' + (title || 'session').replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 40) + '.json';
+    const blob = new Blob([json], { type: 'application/json' });
+    let shared = false;
+    if (navigator.canShare && window.File) {
+      try { const file = new File([blob], name, { type: 'application/json' }); if (navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); shared = true; } } catch (e) { shared = e && e.name === 'AbortError'; }
+    }
+    if (!shared) {
+      const a = document.createElement('a'); const url = URL.createObjectURL(blob); a.href = url; a.download = name; a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 4000);
+      toast('JSONを書き出しました（' + Math.round(blob.size / 1024) + ' KB）');
+    }
+  } catch (e) { console.error(e); toast('書き出しに失敗しました'); }
+  finally { hideLoading(); }
+}
+$('#fileImport').addEventListener('change', async e => {
+  const file = e.target.files && e.target.files[0]; e.target.value = '';
+  if (!file) return;
+  showLoading('読み込んでいます…');
+  try { const text = await file.text(); const s = await backend.importSession(text); toast('「' + s.title + '」を読み込みました'); await openHistory(); }
+  catch (err) { console.warn(err); toast(err.message || '読み込みに失敗しました'); }
+  finally { hideLoading(); }
+});
+
+/* =====================================================================
+ *  ホーム・ヘルプ・初期化
+ * ===================================================================== */
+function refreshHomeState() { /* ホームは静的。将来の「続きから」用フック */ }
+$('#fileCamera').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; importPhoto(f); });
+$('#fileGallery').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; importPhoto(f); });
+$('#filePdf').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; importPdf(f); });
+// PDF ページ選択画面
+$('#btnPdfRange').addEventListener('click', applyPdfRangeInput);
+$('#pdfRange').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); applyPdfRangeInput(); } });
+$('#btnPdfAll').addEventListener('click', () => { for (let n = 1; n <= Pdf.pageCount; n++) Pdf.selected.add(n); syncPdfTiles(); });
+$('#btnPdfNone').addEventListener('click', () => { Pdf.selected.clear(); syncPdfTiles(); });
+$('#btnPdfImport').addEventListener('click', async () => {
+  const pages = Array.from(Pdf.selected).sort((a, b) => a - b);
+  if (!pages.length) return;
+  if (pages.length > 30) {
+    const ok = await confirmDialog({ title: 'たくさんのページを取り込みます', message: pages.length + ' ページを取り込みます。時間がかかり、端末の保存容量も使います（1ページあたり約300〜600KB）。続けますか？', okText: '取り込む' });
+    if (!ok) return;
+  }
+  await importPdfPages(pages);
+});
+// デスクトップ: ホーム画面へ写真/PDF をドラッグ＆ドロップ。
+// ファイルのドラッグに限って document 側でも既定動作を止め、他の画面に落としてもブラウザがそのファイルへ遷移しないようにする
+(() => {
+  const hasFiles = e => !!(e.dataTransfer && e.dataTransfer.types && Array.prototype.includes.call(e.dataTransfer.types, 'Files'));
+  document.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+  document.addEventListener('drop', e => { if (hasFiles(e)) e.preventDefault(); });
+  const home = $('#screen-home');
+  home.addEventListener('dragenter', e => { if (!hasFiles(e)) return; e.preventDefault(); home.classList.add('dragover'); });
+  home.addEventListener('dragover', e => { if (!hasFiles(e)) return; e.preventDefault(); if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'; home.classList.add('dragover'); });
+  home.addEventListener('dragleave', e => { if (!e.relatedTarget || !home.contains(e.relatedTarget)) home.classList.remove('dragover'); });
+  home.addEventListener('drop', e => {
+    home.classList.remove('dragover');
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    const f = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (!f) return;
+    if (isPdfFile(f)) importPdf(f); else importPhoto(f);
+  });
+})();
+$$('label.btn[for]').forEach(l => { l.tabIndex = 0; l.setAttribute('role', 'button'); l.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const t = document.getElementById(l.htmlFor); if (t) t.click(); } }); });
+$('#btnSample').addEventListener('click', () => startSample(false));
+$('#btnDemo').addEventListener('click', () => startSample(true));
+$('#btnHistory').addEventListener('click', openHistory);
+$('#btnHelp').addEventListener('click', () => { if (App.screen === 'help') goBack(); else showScreen('help'); });
+$('#btnBack').addEventListener('click', goBack);
+document.addEventListener('keydown', e => {
+  if (App.screen !== 'quiz' || App.answered) return;
+  const map = { '1': 0, '2': 1, '3': 2, '4': 3, a: 0, b: 1, c: 2, d: 3 };
+  const k = e.key.toLowerCase();
+  if (map[k] !== undefined && !e.metaKey && !e.ctrlKey && !e.altKey && document.activeElement && document.activeElement.tagName !== 'INPUT') { const b = $$('#choices .choice')[map[k]]; if (b && !b.disabled) b.click(); }
+});
+window.addEventListener('error', e => { console.error('unhandled', e.error || e.message); });
+window.addEventListener('unhandledrejection', e => { console.error('unhandled promise', e.reason); });
+
+(async function init() {
+  try { history.replaceState({ screen: 'home' }, ''); } catch (e) { /* ignore */ }
+  const info = await backend.init();
+  App.persistent = !!info.persistent;
+  if (!App.persistent) toast('この環境では保存できないため、データは画面を閉じると消えます', 4500);
+  $('#stepper').hidden = false;
+  showScreen('home', { silentHistory: true });
+  // テスト・拡張用フック（UIには出さない）
+  window.__markerQuiz = { App, backend, detectRegionsFromStrokes, buildTextDistractors, mutateTerm, DIFFICULTY_POLICY, importPdf };
+})();
+</script>
+</body>
+</html>
